@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depot Schedules - DTCSL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../Admin/admin.css">
+</head>
+<body data-page="depot-schedules">
+
+    <main class="main-content">
+        <section class="page active">
+            <div class="page-header" style="margin-bottom:30px;">
+                <h2 style="color:var(--text-main)">Full Route Schedule</h2>
+                <p style="color:var(--text-muted)">Master timetable for all active routes managed from this depot.</p>
+            </div>
+
+            <div class="schedule-grid">
+                <!-- Dynamic Content from ui/api -->
+            </div>
+        </section>
+    </main>
+
+    <script src="../components/ui.js"></script>
+    <script src="../components/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const data = await API.getSchedule();
+            const grid = document.querySelector('.schedule-grid');
+            const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+            
+            if (data) {
+                grid.innerHTML = days.map(day => {
+                    const slots = data.filter(e => e.day === day);
+                    return `
+                        <div class="schedule-day">
+                            <div class="day-header">${day}</div>
+                            ${slots.map(s => `
+                                <div class="schedule-slot">
+                                    <div class="slot-time">${s.time}</div>
+                                    <div class="slot-info">
+                                        <strong>${s.route}</strong>
+                                        <br><small>${s.bus} • ${s.driver}</small>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${slots.length === 0 ? '<div class="schedule-slot slot-empty">No trips</div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        });
+    </script>
+</body>
+</html>
