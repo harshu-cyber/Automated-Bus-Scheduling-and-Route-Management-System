@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Tickets - DTCSL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../Admin/admin.css">
+    <style>
+        .ticket-card { background: var(--card-bg); border-radius: 16px; border: 1px solid var(--border-color); padding: 25px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .ticket-id { font-family: monospace; color: #9FE870; font-size: 14px; }
+        .ticket-price { font-weight: 700; font-size: 20px; color: var(--text-main); }
+    </style>
+</head>
+<body data-page="passenger-tickets">
+
+    <main class="main-content">
+        <section class="page active">
+            <div class="page-header" style="margin-bottom:30px;">
+                <h2 style="color:var(--text-main)">My Travel History</h2>
+                <p style="color:var(--text-muted)">View your past bookings and active e-tickets.</p>
+            </div>
+
+            <div id="ticketList">
+                <div class="ticket-card">
+                    <div>
+                        <div class="ticket-id">#TKT-882-192</div>
+                        <h3 style="color:var(--text-main); margin:10px 0;">Route: RT-001 (Main Street)</h3>
+                        <p style="color:var(--text-muted)">Date: 2026-03-27 | Time: 09:30 AM</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="ticket-price">₹40.00</div>
+                        <span class="badge badge-green">Validated</span>
+                    </div>
+                </div>
+
+                <div class="ticket-card" style="opacity: 0.7;">
+                    <div>
+                        <div class="ticket-id">#TKT-771-002</div>
+                        <h3 style="color:var(--text-main); margin:10px 0;">Route: RT-003 (Outer Ring)</h3>
+                        <p style="color:var(--text-muted)">Date: 2026-03-26 | Time: 11:15 AM</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="ticket-price">₹65.00</div>
+                        <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--text-muted)">Expired</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../components/ui.js"></script>
+    <script src="../components/api.js"></script>
+    <script>
+        // Placeholder for future ticket fetching logic
+    </script>
+</body>
+</html>
