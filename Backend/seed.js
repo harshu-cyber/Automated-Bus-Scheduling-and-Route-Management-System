@@ -28,9 +28,10 @@ const seedData = async () => {
 
     // ═══════════ USERS ═══════════
     await User.create([
-        { username: 'admin',  password: 'admin123',  role: 'admin',  fullName: 'Admin User',    email: 'admin@dtcsl.gov.in',  phone: '+91 98765 43210', location: 'Delhi, India' },
-        { username: 'depot',  password: 'depot123',  role: 'depot',  fullName: 'Depot Manager', email: 'depot@dtcsl.gov.in',  phone: '+91 98765 43211' },
-        { username: 'driver', password: 'driver123', role: 'driver', fullName: 'Rajesh Kumar',  email: 'driver@dtcsl.gov.in', phone: '+91 98765 43212' },
+        { username: 'admin',     password: 'admin123',     role: 'admin',     fullName: 'Admin User',      email: 'admin@dtcsl.gov.in',     phone: '+91 98765 43210', location: 'Delhi, India' },
+        { username: 'depot',     password: 'depot123',     role: 'depot',     fullName: 'Depot Manager',  email: 'depot@dtcsl.gov.in',     phone: '+91 98765 43211', location: 'Delhi, India' },
+        { username: 'driver',    password: 'driver123',    role: 'driver',    fullName: 'Rajesh Kumar',    email: 'driver@dtcsl.gov.in',   phone: '+91 98765 43212', location: 'Delhi, India' },
+        { username: 'passenger', password: 'passenger123', role: 'passenger', fullName: 'Priya Sharma',    email: 'passenger@dtcsl.gov.in', phone: '+91 98765 43213', location: 'Delhi, India' },
     ]);
     console.log('✅ Users seeded');
 
