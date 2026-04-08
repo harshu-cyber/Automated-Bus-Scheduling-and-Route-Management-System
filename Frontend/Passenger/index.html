@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passenger - DTCSL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="../Admin/admin.css">
+    <style>
+        .passenger-main { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; }
+        #liveMap { height: 500px; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); }
+        .search-container { background: var(--card); padding: 30px; border-radius: 20px; border: 1px solid var(--border); }
+        .search-group { margin-bottom: 20px; }
+        .search-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+        .search-group input { width: 100%; padding: 12px 15px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit; }
+        .search-btn { width: 100%; padding: 15px; border-radius: 12px; border: none; background: #9FE870; color: #111; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        .search-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        .live-label { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-weight: 600; font-size: 18px; color: var(--text); }
+        .live-dot { width: 10px; height: 10px; background: #9FE870; border-radius: 50%; animation: blink 1.5s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .bus-marker-label { background: white; border: 1px solid #111; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; color: #111; text-align: center; }
+        @media (max-width: 768px) { .passenger-main { grid-template-columns: 1fr; } #liveMap { height: 300px; } }
+    </style>
+</head>
+<body data-page="passenger-home">
+
+    <main class="main-content">
+        <section class="page active">
+            <div class="passenger-main">
+                <div class="search-container">
+                    <div class="live-label">
+                        <div class="live-dot"></div>
+                        <span>Search & Track Active Buses</span>
+                    </div>
+                    
+                    <div class="search-group">
+                        <label>Enter Route Number or Stop</label>
+                        <input type="text" id="routeSearch" placeholder="e.g. 402, 534, Kashmere Gate">
+                    </div>
+                    <button class="search-btn" id="searchBtn"><i class="fas fa-search"></i> Search Buses</button>
+                    
+                    <div class="table-card" style="margin-top: 30px; background: transparent; padding: 0;">
+                        <h4>Nearby Arrivals</h4>
+                        <table class="data-table" style="font-size: 13px;">
+                            <thead><tr><th>Route</th><th>Bus</th><th>Driver</th><th>Tracking</th></tr></thead>
+                            <tbody id="liveStatusBody">
+                                <tr><td colspan="4" style="text-align:center; padding: 20px; color: var(--text-muted);">Waiting for live updates...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="liveMap"></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="../components/ui.js"></script>
+    <script src="../components/api.js"></script>
+    <script src="../components/socket_client.js"></script>
+    <script>
+        let map, markers = {};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            
+            // Listen for live location updates
+            SocketClient.onLocationUpdate((data) => {
+                updateBusLocation(data);
+                updateTable(data);
+            });
+            
+            document.getElementById('searchBtn').onclick = () => {
+                const query = document.getElementById('routeSearch').value.trim();
+                if (!query) { UI.showAlert('Please enter a route or stop name', 'error'); return; }
+                // Filter table rows by route name
+                const rows = document.querySelectorAll('#liveStatusBody tr');
+                let found = 0;
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(query.toLowerCase())) { row.style.display = ''; found++; }
+                    else { row.style.display = 'none'; }
+                });
+                if (found === 0) UI.showAlert(`No active buses found for "${query}"`, 'error');
+                else UI.showAlert(`Showing ${found} result(s) for "${query}"`);
+            };
+        });
+
+        function initMap() {
+            map = L.map('liveMap').setView([28.6139, 77.2090], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        }
+
+        function updateBusLocation(data) {
+            const { busRegNo, lat, lng, driverName } = data;
+            
+            if (markers[busRegNo]) {
+                markers[busRegNo].setLatLng([lat, lng]);
+            } else {
+                const icon = L.divIcon({
+                    className: 'custom-bus-icon',
+                    html: `<div style="background:#000; color:#9FE870; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #9FE870; font-size:16px;">🚌</div><div class="bus-marker-label">${busRegNo}</div>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
+                markers[busRegNo] = L.marker([lat, lng], { icon }).addTo(map)
+                    .bindPopup(`<b>Bus: ${busRegNo}</b><br>Driver: ${driverName}`);
+            }
+        }
+
+        function updateTable(data) {
+            const tbody = document.getElementById('liveStatusBody');
+            const rowId = `row-${data.busRegNo}`;
+            let row = document.getElementById(rowId);
+            
+            if (!row) {
+                // Remove placeholder if exists
+                if(tbody.innerText.includes('Waiting')) tbody.innerHTML = '';
+                
+                row = document.createElement('tr');
+                row.id = rowId;
+                tbody.appendChild(row);
+            }
+            
+            row.innerHTML = `
+                <td><strong>${data.busRegNo}</strong></td>
+                <td>Active</td>
+                <td>${data.driverName}</td>
+                <td><span class="badge badge-green">LIVE</span></td>
+            `;
+        }
+    </script>
+</body>
+</html>

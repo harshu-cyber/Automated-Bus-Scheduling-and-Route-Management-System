@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On Duty - Driver Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../Admin/admin.css">
+    <style>
+        .duty-card { background: var(--card-bg); border-radius: 16px; border: 1px solid var(--border-color); padding: 30px; margin-bottom: 20px; }
+        .live-status { display: flex; align-items: center; gap: 10px; color: #9FE870; font-weight: 700; }
+        .pulse { width: 10px; height: 10px; background: #9FE870; border-radius: 50%; box-shadow: 0 0 10px #9FE870; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+    </style>
+</head>
+<body data-page="driver-duty">
+
+    <main class="main-content">
+        <section class="page active">
+            <div class="page-header" style="margin-bottom:30px;">
+                <h2 style="color:var(--text-main)">Active Duty</h2>
+                <div class="live-status"><div class="pulse"></div> <span>LIVE BROADCASTING</span></div>
+            </div>
+
+            <div class="duty-card">
+                <div id="dutyInfo">
+                    <h3 style="color:var(--text-main); margin-bottom:10px;">Ongoing Trip</h3>
+                    <p style="color:var(--text-muted)">Tracking your current route and broadcasting location to dispatch.</p>
+                    <div style="margin-top:20px; display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;">
+                        <div><small>ROUTE</small><br><strong id="activeRoute" style="font-size:18px">--</strong></div>
+                        <div><small>BUS REG</small><br><strong id="activeBus" style="font-size:18px">--</strong></div>
+                        <div><small>START TIME</small><br><strong id="activeTime" style="font-size:18px">--</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-card" style="padding:0; overflow:hidden; border-radius:16px; height: 400px; background:#111; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-style:italic; border:1px solid var(--border-color);">
+                Map View (GPS Active)
+            </div>
+        </section>
+    </main>
+
+    <script src="../components/ui.js"></script>
+    <script src="../components/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeTrip = JSON.parse(localStorage.getItem('dtcsl_active_trip'));
+            if (activeTrip) {
+                document.getElementById('activeRoute').innerText = activeTrip.route;
+                document.getElementById('activeBus').innerText = activeTrip.bus;
+                document.getElementById('activeTime').innerText = activeTrip.time;
+            } else {
+                document.getElementById('dutyInfo').innerHTML = '<p style="color:var(--text-muted)">No active trip selected. Go to Dashboard to start a duty.</p>';
+            }
+        });
+    </script>
+</body>
+</html>
