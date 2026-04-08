@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticketo Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg: #0b0f0c;
+            --card: #111827;
+            --text: #e5e7eb;
+            --sidebar: #0e1411;
+            --border: #1f2937;
+            --accent: #9FE870;
+        }
+
+        .light {
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --text: #111;
+            --sidebar: #ffffff;
+            --border: #ddd;
+            --accent: #0284c7;
+        }
+
+        body {
+            margin: 0;
+            font-family: Segoe UI;
+            background: var(--bg);
+            display: flex;
+            color: var(--text);
+            transition: .3s;
+        }
+
+        .sidebar {
+            width: 230px;
+            background: var(--sidebar);
+            padding: 20px;
+            border-right: 1px solid var(--border);
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar li {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            color: gray;
+            cursor: pointer;
+            transition: .3s;
+        }
+
+        .sidebar li:hover {
+            background: var(--border);
+        }
+
+        .sidebar li.active {
+            background: var(--accent);
+            color: black;
+        }
+
+        .sidebar h4 {
+            margin-top: 20px;
+            color: gray;
+        }
+
+        .main {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .search {
+            padding: 10px;
+            width: 250px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--card);
+            color: var(--text);
+        }
+
+        .toggle {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: var(--accent);
+            color: black;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .card {
+            padding: 15px;
+            border-radius: 14px;
+            background: var(--card);
+            transition: .3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .blue {
+            border-left: 5px solid #38bdf8;
+        }
+
+        .yellow {
+            border-left: 5px solid #facc15;
+        }
+
+        .purple {
+            border-left: 5px solid #a78bfa;
+        }
+
+        .green {
+            border-left: 5px solid var(--accent);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .box {
+            background: var(--card);
+            padding: 15px;
+            border-radius: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            color: var(--accent);
+        }
+
+        tr:hover {
+            background: var(--border);
+        }
+
+        .status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .pending {
+            background: #facc15;
+            color: black;
+        }
+
+        .approved {
+            background: #22c55e;
+            color: black;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo">GoExpress</div>
+        <ul>
+            <li class="active">Dashboard</li>
+            <li>Calendars</li>
+            <li>Promotions</li>
+            <li>Payouts</li>
+            <h4>Management</h4>
+            <li>Users</li>
+            <li>Events</li>
+            <li>Tickets</li>
+            <li>Earnings</li>
+            <li>Reviews</li>
+            <li>Reports</li>
+        </ul>
+    </div>
+
+    <div class="main">
+
+        <div class="top">
+            <input class="search" placeholder="Search something...">
+            <button class="toggle" onclick="toggleTheme()">Toggle Mode</button>
+        </div>
+
+        <div class="cards">
+            <div class="card blue">
+                <p>Total Revenue</p>
+                <h2>$350,000</h2>
+            </div>
+            <div class="card yellow">
+                <p>Ticket Sold</p>
+                <h2>48,120</h2>
+            </div>
+            <div class="card purple">
+                <p>Refunded</p>
+                <h2>$42,000</h2>
+            </div>
+            <div class="card green">
+                <p>Payout Included</p>
+                <h2>$120,500</h2>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="box">
+                <h3>Ticket Sales Analytics</h3>
+                <canvas id="bar"></canvas>
+            </div>
+            <div class="box">
+                <h3>User Distribution</h3>
+                <canvas id="pie"></canvas>
+            </div>
+        </div>
+
+        <div class="box">
+            <h3>Recent Payout Request</h3>
+            <table>
+                <tr>
+                    <th>No</th>
+                    <th>Name</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Olivia Smith</td>
+                    <td>$2,745</td>
+                    <td><span class="status pending">Pending</span></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Sophia Bennett</td>
+                    <td>$8,361</td>
+                    <td><span class="status approved">Approved</span></td>
+                </tr>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+
+        function toggleTheme() {
+            document.body.classList.toggle("light")
+        }
+
+        new Chart(document.getElementById("bar"), {
+            type: "bar",
+            data: {
+                labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                datasets: [{ data: [100, 200, 50, 150, 220, 70, 200, 140, 230, 90, 160, 100], backgroundColor: "#9FE870" }]
+            }, options: { plugins: { legend: { display: false } } }
+        })
+
+        new Chart(document.getElementById("pie"), {
+            type: "doughnut",
+            data: { labels: ["Admin", "Organizer", "Attendee"], datasets: [{ data: [10, 30, 60], backgroundColor: ["#a78bfa", "#22c55e", "#38bdf8"] }] },
+            options: { cutout: "70%" }
+        })
+
+    </script>
+
+</body>
+
+</html>

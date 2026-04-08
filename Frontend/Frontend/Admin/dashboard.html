@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - DTCSL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body data-page="dashboard">
+
+    <main class="main-content">
+        <section class="page active">
+            <div class="stat-cards">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(159,232,112,.12);color:#9FE870"><i class="fas fa-bus"></i></div>
+                    <div><div class="stat-num">—</div><div class="stat-label">Total Buses</div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(56,189,248,.12);color:#38bdf8"><i class="fas fa-route"></i></div>
+                    <div><div class="stat-num">—</div><div class="stat-label">Active Routes</div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(250,204,21,.12);color:#facc15"><i class="fas fa-users"></i></div>
+                    <div><div class="stat-num">—</div><div class="stat-label">Crew Members</div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(167,139,250,.12);color:#a78bfa"><i class="fas fa-ticket-alt"></i></div>
+                    <div><div class="stat-num">—</div><div class="stat-label">Daily Passengers</div></div>
+                </div>
+            </div>
+
+            <div class="table-card" style="margin-top: 30px;">
+                <div class="table-header"><h3>Recent Activity</h3></div>
+                <table class="data-table">
+                    <thead><tr><th>Bus</th><th>Route</th><th>Driver</th><th>Status</th><th>Time</th></tr></thead>
+                    <tbody id="activityBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="../components/ui.js"></script>
+    <script src="../components/api.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
