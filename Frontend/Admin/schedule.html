@@ -41,34 +41,34 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Day</label>
-                        <select class="form-input" name="day">
+                        <select class="form-input" name="day" id="schedDay">
                             <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
                             <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Time</label>
-                        <input type="time" class="form-input" name="time" required>
+                        <input type="time" class="form-input" name="time" id="schedTime" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Route ID</label>
-                        <input type="text" class="form-input" name="route" placeholder="e.g. RT-001" required>
+                        <input type="text" class="form-input" name="route" id="schedRoute" placeholder="e.g. RT-001" required>
                     </div>
                     <div class="form-group">
                         <label>Route Name</label>
-                        <input type="text" class="form-input" name="routeName" placeholder="e.g. Kashmiri Gate" required>
+                        <input type="text" class="form-input" name="routeName" id="schedRouteName" placeholder="e.g. Kashmiri Gate" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Bus Reg. No.</label>
-                        <input type="text" class="form-input" name="bus" placeholder="e.g. DL-1PA-1234" required>
+                        <input type="text" class="form-input" name="bus" id="schedBus" placeholder="e.g. DL-1PA-1234" required>
                     </div>
                     <div class="form-group">
                         <label>Driver Name</label>
-                        <input type="text" class="form-input" name="driver" placeholder="e.g. Rajesh Kumar" required>
+                        <input type="text" class="form-input" name="driver" id="schedDriver" placeholder="e.g. Rajesh Kumar" required>
                     </div>
                 </div>
                 <div class="modal-footer" style="margin-top:20px;">
@@ -87,9 +87,15 @@
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
-            const res = await API.fetch('/schedule', { method: 'POST', body: JSON.stringify(data) });
+            const id = document.getElementById('scheduleModal').dataset.editId;
+            let res;
+            if (id) {
+                res = await API.updateRes('schedule', id, data);
+            } else {
+                res = await API.fetch('/schedule', { method: 'POST', body: JSON.stringify(data) });
+            }
             if (res) {
-                UI.showAlert('Schedule entry added successfully!');
+                UI.showAlert(id ? 'Schedule updated!' : 'Schedule entry added successfully!');
                 closeModal('scheduleModal');
                 loadSchedule();
             }

@@ -125,6 +125,7 @@ async function loadSchedule() {
                             <strong>${s.route}</strong>
                             <br><small>${s.bus} • ${s.driver}</small>
                             <div class="slot-actions" style="margin-top:5px; text-align:right;">
+                                <i class="fas fa-edit" style="color:#38bdf8; cursor:pointer; font-size:12px; margin-right:8px;" onclick="editSchedule('${s._id}')"></i>
                                 <i class="fas fa-trash" style="color:#ef4444; cursor:pointer; font-size:12px;" onclick="deleteSchedule('${s._id}')"></i>
                             </div>
                         </div>
@@ -235,6 +236,7 @@ async function editResource(path, id, modalId, fieldMap) {
 const editRoute = (id) => editResource('routes', id, 'routeModal', { 'routeId': 'routeId', 'routeName': 'name' });
 const editBus = (id) => editResource('buses', id, 'busModal', { 'busReg': 'regNo', 'busType': 'type' });
 const editCrew = (id) => editResource('crew', id, 'crewModal', { 'crewName': 'name', 'crewRole': 'role' });
+const editSchedule = (id) => editResource('schedule', id, 'scheduleModal', { 'schedDay': 'day', 'schedTime': 'time', 'schedRoute': 'route', 'schedRouteName': 'routeName', 'schedBus': 'bus', 'schedDriver': 'driver' });
 
 // Global Click Close
 window.onclick = (e) => { if (e.target.classList.contains('modal-overlay')) closeModal(e.target.id); };

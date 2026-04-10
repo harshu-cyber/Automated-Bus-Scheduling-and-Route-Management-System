@@ -23,11 +23,63 @@
         </section>
     </main>
 
+    <!-- Manual Schedule Entry Modal -->
+    <div class="modal-overlay" id="scheduleModal" onclick="if(event.target===this) closeModal('scheduleModal')">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Edit Schedule Entry</h3>
+                <button class="modal-close" onclick="closeModal('scheduleModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <form class="modal-body" id="scheduleForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Day</label>
+                        <select class="form-input" name="day" id="schedDay">
+                            <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+                            <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Time</label>
+                        <input type="time" class="form-input" name="time" id="schedTime" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Route ID</label>
+                        <input type="text" class="form-input" name="route" id="schedRoute" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Route Name</label>
+                        <input type="text" class="form-input" name="routeName" id="schedRouteName" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Bus Reg. No.</label>
+                        <input type="text" class="form-input" name="bus" id="schedBus" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Driver Name</label>
+                        <input type="text" class="form-input" name="driver" id="schedDriver" required>
+                    </div>
+                </div>
+                <div class="modal-footer" style="margin-top:20px;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('scheduleModal')">Cancel</button>
+                    <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="../components/ui.js"></script>
     <script src="../components/api.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
+        let globalScheduleData = [];
+
+        async function loadSchedule() {
             const data = await API.getSchedule();
+            globalScheduleData = data || [];
             const grid = document.querySelector('.schedule-grid');
             const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
             
@@ -43,6 +95,10 @@
                                     <div class="slot-info">
                                         <strong>${s.route}</strong>
                                         <br><small>${s.bus} • ${s.driver}</small>
+                                        <div class="slot-actions" style="margin-top:5px; text-align:right;">
+                                            <i class="fas fa-edit" style="color:#38bdf8; cursor:pointer; font-size:12px; margin-right:8px;" onclick="editSchedule('${s._id}')"></i>
+                                            <i class="fas fa-trash" style="color:#ef4444; cursor:pointer; font-size:12px;" onclick="deleteSchedule('${s._id}')"></i>
+                                        </div>
                                     </div>
                                 </div>
                             `).join('')}
@@ -51,7 +107,58 @@
                     `;
                 }).join('');
             }
-        });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadSchedule);
+
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { 
+            const modal = document.getElementById(id);
+            modal.classList.remove('open'); 
+            delete modal.dataset.editId;
+            modal.querySelector('form').reset();
+        }
+
+        async function deleteSchedule(id) {
+            if (!confirm('Are you sure you want to delete this scheduled trip?')) return;
+            const res = await API.deleteRes('schedule', id);
+            if (res) { loadSchedule(); UI.showAlert('Deleted successfully!'); }
+        }
+
+        async function editSchedule(id) {
+            const item = globalScheduleData.find(x => x._id === id);
+            if (!item) return;
+            const modal = document.getElementById('scheduleModal');
+            document.getElementById('schedDay').value = item.day;
+            document.getElementById('schedTime').value = item.time;
+            document.getElementById('schedRoute').value = item.route;
+            document.getElementById('schedRouteName').value = item.routeName;
+            document.getElementById('schedBus').value = item.bus;
+            document.getElementById('schedDriver').value = item.driver;
+            modal.dataset.editId = id;
+            openModal('scheduleModal');
+        }
+
+        const form = document.getElementById('scheduleForm');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+                const id = document.getElementById('scheduleModal').dataset.editId;
+                let res;
+                if (id) {
+                    res = await API.updateRes('schedule', id, data);
+                } else {
+                    res = await API.fetch('/schedule', { method: 'POST', body: JSON.stringify(data) });
+                }
+                if (res) {
+                    UI.showAlert(id ? 'Schedule updated!' : 'Schedule entry added successfully!');
+                    closeModal('scheduleModal');
+                    loadSchedule();
+                }
+            };
+        }
     </script>
 </body>
 </html>

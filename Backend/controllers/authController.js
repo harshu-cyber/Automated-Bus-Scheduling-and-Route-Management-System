@@ -16,11 +16,15 @@ exports.register = async (req, res) => {
             return res.status(400).json({ message: 'Username already taken' });
         }
 
+        if (role === 'admin' || role === 'depot') {
+            return res.status(403).json({ message: 'Registration for administrative roles is not allowed' });
+        }
+
         const user = await User.create({
             username: username.toLowerCase(),
             email: email || '',
             password,
-            role: role || 'admin',
+            role: role || 'passenger',
             fullName: fullName || username,
             phone: phone || '',
         });
