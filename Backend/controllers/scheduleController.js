@@ -147,6 +147,7 @@ exports.autoGenerateSchedule = async (req, res) => {
         const shuffledRoutes = shuffle(activeRoutes);
         
         // Generate schedule only for today with relevant time slots
+        let slotIndex = 0;
         for (const time of relevantTimeSlots) {
             const slotKey = `${time}`;
             resourceState[slotKey] = { 
@@ -154,49 +155,66 @@ exports.autoGenerateSchedule = async (req, res) => {
                 drivers: new Set() 
             };
 
-            // Maximum trips per slot (limited by available resources)
+            // Rotate routes for this slot — each slot starts from a different route
+            const routeOffset = slotIndex % shuffledRoutes.length;
+
+            // How many trips this slot (limited by resources, max 4 concurrent)
             const maxTrips = Math.min(
                 shuffledRoutes.length, 
                 activeBuses.length, 
                 availableDrivers.length, 
-                4  // Realistic max concurrent routes per time slot
+                4
             );
 
-            for (let i = 0; i < maxTrips; i++) {
-                const route = shuffledRoutes[i % shuffledRoutes.length];
+            // Pick only a subset of routes per slot (rotate which ones)
+            // e.g. with 5 routes and maxTrips=3: slot0→[0,1,2], slot1→[1,2,3], slot2→[2,3,4]
+            const tripsThisSlot = Math.min(maxTrips, Math.max(1, Math.ceil(shuffledRoutes.length / 2)));
+
+            for (let i = 0; i < tripsThisSlot; i++) {
+                const routeIdx = (routeOffset + i) % shuffledRoutes.length;
+                const route = shuffledRoutes[routeIdx];
                 
-                // Find an available bus (not already assigned in this time slot)
-                const bus = activeBuses.find(b => 
-                    !resourceState[slotKey].buses.has(b.regNo)
-                );
+                // Rotate bus selection — offset by slot index
+                const busOffset = (slotIndex + i) % activeBuses.length;
+                let bus = null;
+                for (let b = 0; b < activeBuses.length; b++) {
+                    const candidate = activeBuses[(busOffset + b) % activeBuses.length];
+                    if (!resourceState[slotKey].buses.has(candidate.regNo)) {
+                        bus = candidate;
+                        break;
+                    }
+                }
                 
-                // Find an available driver (not already assigned, daily limit < 3)
-                const driver = availableDrivers.find(d => {
-                    const dailyCount = driverDailyWork[d.name] || 0;
-                    return !resourceState[slotKey].drivers.has(d.name) && dailyCount < 3;
-                });
+                // Rotate driver selection — offset by slot index
+                const driverOffset = (slotIndex + i) % availableDrivers.length;
+                let driver = null;
+                for (let d = 0; d < availableDrivers.length; d++) {
+                    const candidate = availableDrivers[(driverOffset + d) % availableDrivers.length];
+                    const dailyCount = driverDailyWork[candidate.name] || 0;
+                    if (!resourceState[slotKey].drivers.has(candidate.name) && dailyCount < 3) {
+                        driver = candidate;
+                        break;
+                    }
+                }
 
                 if (bus && driver) {
-                    // Mark resources as used in this slot
                     resourceState[slotKey].buses.add(bus.regNo);
                     resourceState[slotKey].drivers.add(driver.name);
-                    
-                    // Increment driver's trip count for today
                     driverDailyWork[driver.name] = (driverDailyWork[driver.name] || 0) + 1;
 
-                    // Create schedule entry with ONLY registered data (for today only)
                     generatedEntries.push({
-                        date: currentDate,                  // Specific date in YYYY-MM-DD format
-                        day: dayName,                       // Day name (e.g., "Monday")
-                        time,                               // Time slot
-                        route: route.routeId,               // Registered route ID
-                        routeName: route.name,              // Actual registered route name
-                        bus: bus.regNo,                     // Registered bus registration number
-                        driver: driver.name,                // Registered driver name
-                        status: 'Scheduled'                 // Initial status is Scheduled
+                        date: currentDate,
+                        day: dayName,
+                        time,
+                        route: route.routeId,
+                        routeName: route.name,
+                        bus: bus.regNo,
+                        driver: driver.name,
+                        status: 'Scheduled'
                     });
                 }
             }
+            slotIndex++;
         }
 
         // Validation: Ensure schedule was generated

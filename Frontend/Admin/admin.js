@@ -100,9 +100,11 @@ async function loadBuses() {
 }
 
 // ═══════════ SCHEDULE ═══════════
+let globalScheduleData = [];
 async function loadSchedule() {
     const data = await API.getSchedule();
     if (!data) return;
+    globalScheduleData = data;
     const grid = document.querySelector('.schedule-grid');
     // Wrap in scroll container if not already
     let wrapper = grid.parentElement;
@@ -112,44 +114,34 @@ async function loadSchedule() {
         grid.parentNode.insertBefore(w, grid);
         w.appendChild(grid);
     }
-    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-    grid.innerHTML = days.map(day => {
-        const slots = data.filter(e => e.day === day);
+
+    // Flat card layout — no day grouping
+    if (!data.length) {
+        grid.innerHTML = '<div class="schedule-slot slot-empty" style="grid-column:1/-1; text-align:center; padding:40px;">No scheduled trips. Click "Manual Entry" to add a schedule.</div>';
+        return;
+    }
+
+    grid.innerHTML = data.map(s => {
+        // Format date for display (e.g., "12 Apr 2026")
+        const dateDisplay = s.date
+            ? new Date(s.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+            : '';
+        const dayDate = s.day + (dateDisplay ? `, ${dateDisplay}` : '');
         return `
-            <div class="schedule-day">
-                <div class="day-header">${day}</div>
-                ${slots.map(s => `
-                    <div class="schedule-slot">
-                        <div class="slot-time">${s.time}</div>
-                        <div class="slot-info">
-                            <strong>${s.route}</strong>
-                            <br><small>${s.bus} • ${s.driver}</small>
-                            <div class="slot-actions" style="margin-top:5px; text-align:right;">
-                                <i class="fas fa-edit" style="color:#38bdf8; cursor:pointer; font-size:12px; margin-right:8px;" onclick="editSchedule('${s._id}')"></i>
-                                <i class="fas fa-trash" style="color:#ef4444; cursor:pointer; font-size:12px;" onclick="deleteSchedule('${s._id}')"></i>
-                            </div>
-                        </div>
+            <div class="schedule-slot">
+                <div class="slot-date-badge">${dayDate}</div>
+                <div class="slot-time">${s.time}</div>
+                <div class="slot-info">
+                    <strong>${s.route}</strong>${s.routeName ? ` — ${s.routeName}` : ''}
+                    <br><small><i class="fas fa-bus" style="margin-right:4px;opacity:.6;"></i>${s.bus} &bull; <i class="fas fa-user" style="margin-right:4px;opacity:.6;"></i>${s.driver}</small>
+                    <div class="slot-actions" style="margin-top:5px; text-align:right;">
+                        <i class="fas fa-edit" style="color:#38bdf8; cursor:pointer; font-size:12px; margin-right:8px;" onclick="editSchedule('${s._id}')"></i>
+                        <i class="fas fa-trash" style="color:#ef4444; cursor:pointer; font-size:12px;" onclick="deleteSchedule('${s._id}')"></i>
                     </div>
-                `).join('')}
-                ${slots.length === 0 ? '<div class="schedule-slot slot-empty">No trips</div>' : ''}
+                </div>
             </div>
         `;
     }).join('');
-
-    const autoGenBtn = document.getElementById('autoGenBtn');
-    if (autoGenBtn) {
-        autoGenBtn.onclick = async () => {
-            autoGenBtn.disabled = true;
-            autoGenBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-            const res = await API.generateSchedule();
-            if (res) {
-                UI.showAlert(`Generated ${res.count} trips!`);
-                loadSchedule();
-            }
-            autoGenBtn.disabled = false;
-            autoGenBtn.innerHTML = '<i class="fas fa-magic"></i> Auto-Generate Schedule';
-        };
-    }
 }
 
 // ═══════════ CREW ═══════════
@@ -236,7 +228,20 @@ async function editResource(path, id, modalId, fieldMap) {
 const editRoute = (id) => editResource('routes', id, 'routeModal', { 'routeId': 'routeId', 'routeName': 'name' });
 const editBus = (id) => editResource('buses', id, 'busModal', { 'busReg': 'regNo', 'busType': 'type' });
 const editCrew = (id) => editResource('crew', id, 'crewModal', { 'crewName': 'name', 'crewRole': 'role' });
-const editSchedule = (id) => editResource('schedule', id, 'scheduleModal', { 'schedDay': 'day', 'schedTime': 'time', 'schedRoute': 'route', 'schedRouteName': 'routeName', 'schedBus': 'bus', 'schedDriver': 'driver' });
+function editSchedule(id) {
+    const item = globalScheduleData.find(x => x._id === id);
+    if (!item) return;
+    const modal = document.getElementById('scheduleModal');
+    if (!modal) return;
+    document.getElementById('schedDay').value = item.day;
+    document.getElementById('schedTime').value = item.time;
+    document.getElementById('schedRoute').value = item.route;
+    document.getElementById('schedRouteName').value = item.routeName || '';
+    document.getElementById('schedBus').value = item.bus;
+    document.getElementById('schedDriver').value = item.driver;
+    modal.dataset.editId = id;
+    openModal('scheduleModal');
+}
 
 // Global Click Close
 window.onclick = (e) => { if (e.target.classList.contains('modal-overlay')) closeModal(e.target.id); };

@@ -71,14 +71,24 @@
             const myTrips = schedules?.filter(s => s.driver === user.fullName) || [];
             
             const tbody = document.getElementById('myAssigns');
-            tbody.innerHTML = myTrips.map(s => `
-                <tr>
-                    <td>${s.time}</td>
-                    <td>${s.route}</td>
-                    <td>${s.bus}</td>
-                    <td><button class="btn-sm" onclick="selectTrip('${s.route}', '${s.bus}')">Select</button></td>
-                </tr>
-            `).join('');
+            if (myTrips.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No assignments yet. Awaiting schedule from Depot Manager.</td></tr>';
+            } else {
+                tbody.innerHTML = myTrips.map(s => {
+                    const dateLabel = s.date
+                        ? new Date(s.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                        : '';
+                    const routeDisplay = s.routeName ? `${s.route} — ${s.routeName}` : s.route;
+                    return `
+                        <tr>
+                            <td>${s.time}${dateLabel ? `<br><small style="color:var(--text-muted)">${s.day}, ${dateLabel}</small>` : ''}</td>
+                            <td>${routeDisplay}</td>
+                            <td>${s.bus}</td>
+                            <td><button class="btn-sm" onclick="selectTrip('${s.route}', '${s.bus}')">Select</button></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
 
             window.selectTrip = (route, bus) => {
                 activeTrip = { route, bus };

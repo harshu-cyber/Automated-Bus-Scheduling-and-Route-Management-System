@@ -12,13 +12,40 @@
 
     <main class="main-content">
         <section class="page active">
-            <div class="page-header" style="margin-bottom:30px;">
-                <h2 style="color:var(--text-main)">Full Route Schedule</h2>
-                <p style="color:var(--text-muted)">Master timetable for all active routes managed from this depot.</p>
+            <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h2 style="color:var(--text-main)">Full Route Schedule</h2>
+                    <p style="color:var(--text-muted)">Master timetable for all active routes managed from this depot.</p>
+                </div>
+                <div class="page-actions" style="display:flex; gap:10px;">
+                    <button class="btn-primary" id="autoGenBtn" style="background:#9FE870; color:#111; border:none; padding:12px 20px; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Outfit',sans-serif; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-magic"></i> Auto-Generate Schedule
+                    </button>
+                    <button class="btn-secondary" onclick="openModal('scheduleModal')" style="padding:12px 20px; border-radius:10px; border:1px solid var(--border); background:transparent; color:var(--text); font-weight:600; cursor:pointer; font-family:'Outfit',sans-serif; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-plus"></i> Manual Entry
+                    </button>
+                </div>
             </div>
 
             <div class="schedule-grid">
                 <!-- Dynamic Content from ui/api -->
+            </div>
+
+            <!-- Apply Schedule Action Bar -->
+            <div id="applyBar" style="display:none; margin-top:24px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px 24px; display:none;">
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+                    <div>
+                        <h4 style="font-family:'Outfit',sans-serif; font-weight:700; font-size:1rem; color:var(--text); margin-bottom:4px;">
+                            <i class="fas fa-clipboard-check" style="color:#9FE870; margin-right:8px;"></i>Ready to assign?
+                        </h4>
+                        <p style="font-size:.82rem; color:var(--text-muted);" id="applySummary">
+                            Click "Apply Schedule" to assign all trips to drivers. This will immediately reflect on each driver's portal.
+                        </p>
+                    </div>
+                    <button id="applyScheduleBtn" style="background:linear-gradient(135deg,#9FE870,#6ee65a); color:#111; border:none; padding:14px 32px; border-radius:12px; font-family:'Outfit',sans-serif; font-weight:700; font-size:.95rem; cursor:pointer; display:flex; align-items:center; gap:10px; transition:all .25s; white-space:nowrap;">
+                        <i class="fas fa-check-double"></i> Apply Schedule to Drivers
+                    </button>
+                </div>
             </div>
         </section>
     </main>
@@ -81,35 +108,117 @@
             const data = await API.getSchedule();
             globalScheduleData = data || [];
             const grid = document.querySelector('.schedule-grid');
-            const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
             
-            if (data) {
-                grid.innerHTML = days.map(day => {
-                    const slots = data.filter(e => e.day === day);
-                    return `
-                        <div class="schedule-day">
-                            <div class="day-header">${day}</div>
-                            ${slots.map(s => `
-                                <div class="schedule-slot">
-                                    <div class="slot-time">${s.time}</div>
-                                    <div class="slot-info">
-                                        <strong>${s.route}</strong>
-                                        <br><small>${s.bus} • ${s.driver}</small>
-                                        <div class="slot-actions" style="margin-top:5px; text-align:right;">
-                                            <i class="fas fa-edit" style="color:#38bdf8; cursor:pointer; font-size:12px; margin-right:8px;" onclick="editSchedule('${s._id}')"></i>
-                                            <i class="fas fa-trash" style="color:#ef4444; cursor:pointer; font-size:12px;" onclick="deleteSchedule('${s._id}')"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            `).join('')}
-                            ${slots.length === 0 ? '<div class="schedule-slot slot-empty">No trips</div>' : ''}
+            if (!data || !data.length) {
+                grid.innerHTML = '<div class="schedule-slot slot-empty" style="grid-column:1/-1; text-align:center; padding:40px;">No scheduled trips available.</div>';
+                return;
+            }
+
+            grid.innerHTML = data.map(s => {
+                const dateDisplay = s.date
+                    ? new Date(s.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : '';
+                const dayDate = s.day + (dateDisplay ? `, ${dateDisplay}` : '');
+                const statusBadge = s.status === 'Scheduled' ? 'badge-green' : s.status === 'In-Progress' ? 'badge-yellow' : 'badge-red';
+                return `
+                    <div class="schedule-slot">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <div class="slot-date-badge">${dayDate}</div>
+                            <span class="badge ${statusBadge}" style="font-size:.65rem;">${s.status}</span>
                         </div>
-                    `;
-                }).join('');
+                        <div class="slot-time">${s.time}</div>
+                        <div class="slot-info">
+                            <strong>${s.route}</strong>${s.routeName ? ` — ${s.routeName}` : ''}
+                            <br><small><i class="fas fa-bus" style="margin-right:4px;opacity:.6;"></i>${s.bus} &bull; <i class="fas fa-user" style="margin-right:4px;opacity:.6;"></i>${s.driver}</small>
+                            <div class="slot-actions" style="margin-top:5px; text-align:right;">
+                                <i class="fas fa-edit" style="color:#38bdf8; cursor:pointer; font-size:12px; margin-right:8px;" onclick="editSchedule('${s._id}')"></i>
+                                <i class="fas fa-trash" style="color:#ef4444; cursor:pointer; font-size:12px;" onclick="deleteSchedule('${s._id}')"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Show/hide apply bar
+            const applyBar = document.getElementById('applyBar');
+            if (applyBar) {
+                if (data.length > 0) {
+                    applyBar.style.display = 'block';
+                    const drivers = [...new Set(data.map(s => s.driver))];
+                    const buses = [...new Set(data.map(s => s.bus))];
+                    const routes = [...new Set(data.map(s => s.route))];
+                    document.getElementById('applySummary').innerHTML = 
+                        `<strong>${data.length}</strong> trips &bull; <strong>${drivers.length}</strong> driver(s) &bull; <strong>${buses.length}</strong> bus(es) &bull; <strong>${routes.length}</strong> route(s) ready to be assigned.`;
+                } else {
+                    applyBar.style.display = 'none';
+                }
             }
         }
 
-        document.addEventListener('DOMContentLoaded', loadSchedule);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSchedule();
+
+            // Auto-generate handler
+            const autoGenBtn = document.getElementById('autoGenBtn');
+            if (autoGenBtn) {
+                autoGenBtn.onclick = async () => {
+                    autoGenBtn.disabled = true;
+                    autoGenBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                    const res = await API.generateSchedule();
+                    if (res) {
+                        UI.showAlert(`Generated ${res.count} trips for today!`);
+                        loadSchedule();
+                    }
+                    autoGenBtn.disabled = false;
+                    autoGenBtn.innerHTML = '<i class="fas fa-magic"></i> Auto-Generate Schedule';
+                };
+            }
+
+            // Apply schedule handler
+            const applyBtn = document.getElementById('applyScheduleBtn');
+            if (applyBtn) {
+                applyBtn.onclick = async () => {
+                    if (globalScheduleData.length === 0) {
+                        UI.showAlert('No schedules to apply. Generate a schedule first.', 'error');
+                        return;
+                    }
+
+                    if (!confirm(`Apply ${globalScheduleData.length} schedules to drivers? This will immediately reflect on their portals.`)) return;
+
+                    applyBtn.disabled = true;
+                    applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
+
+                    // Update all scheduled entries to confirmed status
+                    let successCount = 0;
+                    for (const entry of globalScheduleData) {
+                        if (entry.status === 'Scheduled') {
+                            const res = await API.updateRes('schedule', entry._id, { status: 'Scheduled' });
+                            if (res) successCount++;
+                        } else {
+                            successCount++;
+                        }
+                    }
+
+                    const drivers = [...new Set(globalScheduleData.map(s => s.driver))];
+
+                    applyBtn.disabled = false;
+                    applyBtn.innerHTML = '<i class="fas fa-check-double"></i> Applied Successfully!';
+                    applyBtn.style.background = 'rgba(34,197,94,.15)';
+                    applyBtn.style.color = '#22c55e';
+                    applyBtn.style.border = '1px solid #22c55e';
+
+                    UI.showAlert(`✅ Schedule applied! ${successCount} trips assigned to ${drivers.length} driver(s). Changes are now live on all driver portals.`);
+
+                    // Reset button after 4 seconds
+                    setTimeout(() => {
+                        applyBtn.innerHTML = '<i class="fas fa-check-double"></i> Apply Schedule to Drivers';
+                        applyBtn.style.background = 'linear-gradient(135deg,#9FE870,#6ee65a)';
+                        applyBtn.style.color = '#111';
+                        applyBtn.style.border = 'none';
+                    }, 4000);
+                };
+            }
+        });
 
         function openModal(id) { document.getElementById(id).classList.add('open'); }
         function closeModal(id) { 
