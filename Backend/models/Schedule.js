@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const scheduleSchema = new mongoose.Schema({
+    date:    { type: String, required: true },      // Date in YYYY-MM-DD format (e.g., "2026-04-12")
     day:     { type: String, enum: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'], required: true },
     time:    { type: String, required: true },
     route:   { type: String, required: true },     // routeId reference
