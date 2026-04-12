@@ -10,7 +10,7 @@ const User = require('../models/User');
 exports.getAllSchedules = async (req, res) => {
     try {
         const filter = {};
-        if (req.query.day) filter.day = req.query.day;
+        if (req.query.day) filter.day = req.query.day; // query params
         const entries = await Schedule.find(filter).sort({ day: 1, time: 1 });
         res.json(entries);
     } catch (err) {
@@ -94,74 +94,107 @@ exports.autoGenerateSchedule = async (req, res) => {
             });
         }
 
-        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        const timeSlots = ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
-        const weekendSlots = ['08:00', '11:00', '14:00', '17:00', '20:00'];
+        // Get current date and time for daily schedule generation
+        const now = new Date();
+        const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+        const currentHour = now.getHours();
+        const currentMinutes = now.getMinutes();
+
+        // Define all possible time slots (24-hour format)
+        const allTimeSlots = [
+        '05:00', '06:00', '07:00',
+        '08:00', '09:00', '10:00',
+        '11:00', '12:00', '13:00',
+        '14:00', '15:00', '16:00',
+        '17:00', '18:00', '19:00',
+        '20:00', '21:00', '22:00'
+        ];
+        
+        // Get day name for today (e.g., "Monday")
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = dayNames[now.getDay()];
+
+        // Filter time slots: only include slots from current time until 23:59
+        const relevantTimeSlots = allTimeSlots.filter(slot => {
+            const [slotHour, slotMinutes] = slot.split(':').map(Number);
+            const slotTotalMinutes = slotHour * 60 + slotMinutes;
+            const currentTotalMinutes = currentHour * 60 + currentMinutes;
+            return slotTotalMinutes >= currentTotalMinutes;
+        });
+
+        // Add 23:00 slot if not already present (to ensure coverage until end of day)
+        if (!relevantTimeSlots.includes('23:00') && currentHour < 23) {
+            relevantTimeSlots.push('23:00');
+        }
+
+        // Validation: Ensure there are available time slots for today
+        if (relevantTimeSlots.length === 0) {
+            return res.status(400).json({ 
+                message: 'No available time slots remaining for today. Schedule generation only available before 11:59 PM.',
+                code: 'NO_TIME_SLOTS'
+            });
+        }
 
         const generatedEntries = [];
         
         // Track resource utilization per time slot to avoid double-booking
-        const resourceState = {}; // { [day_time]: { buses: Set, drivers: Set } }
+        const resourceState = {}; // { [time]: { buses: Set, drivers: Set } }
 
-        // Track driver work count per day
-        const driverDailyWork = {}; // { [day_driverName]: count }
+        // Track driver work count for today
+        const driverDailyWork = {}; // { [driverName]: count }
 
         const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+        const shuffledRoutes = shuffle(activeRoutes);
+        
+        // Generate schedule only for today with relevant time slots
+        for (const time of relevantTimeSlots) {
+            const slotKey = `${time}`;
+            resourceState[slotKey] = { 
+                buses: new Set(), 
+                drivers: new Set() 
+            };
 
-        for (const day of days) {
-            const slots = (day === 'Saturday' || day === 'Sunday') ? weekendSlots : timeSlots;
-            const shuffledRoutes = shuffle(activeRoutes);
-            
-            for (const time of slots) {
-                const slotKey = `${day}_${time}`;
-                resourceState[slotKey] = { 
-                    buses: new Set(), 
-                    drivers: new Set() 
-                };
+            // Maximum trips per slot (limited by available resources)
+            const maxTrips = Math.min(
+                shuffledRoutes.length, 
+                activeBuses.length, 
+                availableDrivers.length, 
+                4  // Realistic max concurrent routes per time slot
+            );
 
-                // Maximum trips per slot (limited by available resources)
-                const maxTrips = Math.min(
-                    shuffledRoutes.length, 
-                    activeBuses.length, 
-                    availableDrivers.length, 
-                    4  // Realistic max concurrent routes per time slot
+            for (let i = 0; i < maxTrips; i++) {
+                const route = shuffledRoutes[i % shuffledRoutes.length];
+                
+                // Find an available bus (not already assigned in this time slot)
+                const bus = activeBuses.find(b => 
+                    !resourceState[slotKey].buses.has(b.regNo)
                 );
+                
+                // Find an available driver (not already assigned, daily limit < 3)
+                const driver = availableDrivers.find(d => {
+                    const dailyCount = driverDailyWork[d.name] || 0;
+                    return !resourceState[slotKey].drivers.has(d.name) && dailyCount < 3;
+                });
 
-                for (let i = 0; i < maxTrips; i++) {
-                    const route = shuffledRoutes[i % shuffledRoutes.length];
+                if (bus && driver) {
+                    // Mark resources as used in this slot
+                    resourceState[slotKey].buses.add(bus.regNo);
+                    resourceState[slotKey].drivers.add(driver.name);
                     
-                    // Find an available bus (not already assigned in this time slot)
-                    const bus = activeBuses.find(b => 
-                        !resourceState[slotKey].buses.has(b.regNo)
-                    );
-                    
-                    // Find an available driver (not already assigned, daily limit < 3)
-                    const driver = availableDrivers.find(d => {
-                        const dailyKey = `${day}_${d.name}`;
-                        const dailyCount = driverDailyWork[dailyKey] || 0;
-                        return !resourceState[slotKey].drivers.has(d.name) && dailyCount < 3;
+                    // Increment driver's trip count for today
+                    driverDailyWork[driver.name] = (driverDailyWork[driver.name] || 0) + 1;
+
+                    // Create schedule entry with ONLY registered data (for today only)
+                    generatedEntries.push({
+                        date: currentDate,                  // Specific date in YYYY-MM-DD format
+                        day: dayName,                       // Day name (e.g., "Monday")
+                        time,                               // Time slot
+                        route: route.routeId,               // Registered route ID
+                        routeName: route.name,              // Actual registered route name
+                        bus: bus.regNo,                     // Registered bus registration number
+                        driver: driver.name,                // Registered driver name
+                        status: 'Scheduled'                 // Initial status is Scheduled
                     });
-
-                    if (bus && driver) {
-                        // Mark resources as used in this slot
-                        resourceState[slotKey].buses.add(bus.regNo);
-                        resourceState[slotKey].drivers.add(driver.name);
-                        
-                        // Increment driver's daily trip count
-                        const dailyKey = `${day}_${driver.name}`;
-                        driverDailyWork[dailyKey] = (driverDailyWork[dailyKey] || 0) + 1;
-
-                        // Create schedule entry with ONLY registered data
-                        generatedEntries.push({
-                            day,
-                            time,
-                            route: route.routeId,           // Registered route ID
-                            routeName: route.name,          // Actual registered route name (no splitting)
-                            bus: bus.regNo,                 // Registered bus registration number
-                            driver: driver.name,            // Registered driver name
-                            status: 'Scheduled'             // Initial status is Scheduled
-                        });
-                    }
                 }
             }
         }
@@ -182,11 +215,13 @@ exports.autoGenerateSchedule = async (req, res) => {
         const saved = await Schedule.insertMany(generatedEntries);
 
         res.status(201).json({
-            message: 'Schedule auto-generated successfully from registered resources.',
+            message: 'Daily schedule auto-generated successfully from registered resources.',
             count: saved.length,
             data: saved,
             summary: { 
-                daysUsed: days.length,
+                date: currentDate,
+                dayName: dayName,
+                timeSlots: relevantTimeSlots.length,
                 totalTrips: saved.length,
                 busesUsed: new Set(saved.map(s => s.bus)).size,
                 driversUsed: new Set(saved.map(s => s.driver)).size,
