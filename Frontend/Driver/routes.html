@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Management - DTCSL Driver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../Admin/admin.css">
+</head>
+<body data-page="routes">
+
+    <main class="main-content">
+        <section class="page active">
+            <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                <h2 style="color:var(--text-main)">Route Management</h2>
+                
+            </div>
+
+            <div class="table-card">
+                <div class="table-header"><h3>All Active Routes</h3></div>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>ID</th><th>Route Name</th><th>Stops</th><th>Distance</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="routesBody">
+                        <!-- Dynamic content from admin.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+
+
+    <script src="../components/ui.js"></script>
+    <script src="../components/api.js"></script>
+    
+    
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const data = await API.getRoutes();
+        const tbody = document.getElementById('routesBody');
+        if (tbody && data) {
+            tbody.innerHTML = data.map(r => `
+                <tr>
+                    <td><strong>${r.routeId}</strong></td>
+                    <td>${r.name}</td>
+                    <td>${r.stops}</td>
+                    <td>${r.distance} km</td>
+                    <td><span class="badge ${r.status === 'Active' ? 'badge-green' : 'badge-yellow'}">${r.status}</span></td>
+                </tr>
+            `).join('');
+        }
+    });
+</script>
+</body>
+</html>

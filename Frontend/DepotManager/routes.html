@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Management - DTCSL Depot Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../Admin/admin.css">
+</head>
+<body data-page="routes">
+
+    <main class="main-content">
+        <section class="page active">
+            <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                <h2 style="color:var(--text-main)">Route Management</h2>
+                <button class="btn-primary" onclick="openModal('routeModal')" style="background:#9FE870; color:#111; border:none; padding:12px 20px; border-radius:10px; font-weight:700; cursor:pointer;">
+                    <i class="fas fa-plus"></i> Add New Route
+                </button>
+            </div>
+
+            <div class="table-card">
+                <div class="table-header"><h3>All Active Routes</h3></div>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>ID</th><th>Route Name</th><th>Stops</th><th>Distance</th><th>Status</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="routesBody">
+                        <!-- Dynamic content from admin.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="routeModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Route Details</h3>
+                <button class="modal-close" onclick="closeModal('routeModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <form class="modal-body" id="routeForm">
+                <div class="form-group">
+                    <label>Route ID</label>
+                    <input type="text" class="form-input" id="routeId" name="routeId" placeholder="e.g. RT-101" required>
+                </div>
+                <div class="form-group">
+                    <label>Route Name</label>
+                    <input type="text" class="form-input" id="routeName" name="name" placeholder="e.g. Kashmiri Gate → ISBT" required>
+                </div>
+                <div class="form-row" style="display:flex; gap:15px;">
+                    <div class="form-group" style="flex:1">
+                        <label>Stops</label>
+                        <input type="number" class="form-input" id="routeStops" name="stops" placeholder="0">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Distance (km)</label>
+                        <input type="number" step="0.1" class="form-input" id="routeDistance" name="distance" placeholder="0.0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select class="form-input" id="routeStatus" name="status">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Maintenance">Maintenance</option>
+                    </select>
+                </div>
+                <div class="modal-footer" style="margin-top:20px; text-align:right;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('routeModal')" style="padding:10px 20px; border-radius:8px; border:1px solid var(--border-color); background:transparent; color:var(--text-main); margin-right:10px; cursor:pointer;">Cancel</button>
+                    <button type="submit" class="btn-primary" style="padding:10px 20px; border-radius:8px; border:none; background:#9FE870; color:#111; font-weight:700; cursor:pointer;">Save Route</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../components/ui.js"></script>
+    <script src="../components/api.js"></script>
+    <script src="../Admin/admin.js"></script>
+    <script>
+        // Specific Form Handler for Routes
+        document.getElementById('routeForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const modal = document.getElementById('routeModal');
+            const id = modal.dataset.editId;
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            let res;
+            if (id) {
+                res = await API.updateRes('routes', id, data);
+            } else {
+                res = await API.fetch('/routes', { method: 'POST', body: JSON.stringify(data) });
+            }
+
+            if (res) {
+                UI.showAlert('Route saved successfully!');
+                closeModal('routeModal');
+                loadRoutes();
+            }
+        };
+        // Override the target tbody to match admin.js or update admin.js
+    </script>
+</body>
+</html>

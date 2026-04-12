@@ -28,6 +28,7 @@ app.use('/api/schedule',  require('./routes/schedule'));
 app.use('/api/crew',      require('./routes/crew'));
 app.use('/api/depots',    require('./routes/depots'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/leaves',    require('./routes/leaves'));
 
 // Health check
 app.get('/', (req, res) => {

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply Leave - DTCSL Driver</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../Admin/admin.css">
+    <style>
+        .leave-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+        @media (max-width: 900px) { .leave-layout { grid-template-columns: 1fr; } }
+
+        /* ═══════ LEAVE FORM CARD ═══════ */
+        .leave-form-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 20px; padding: 30px;
+            position: relative; overflow: hidden;
+        }
+        .leave-form-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, #9FE870, #38bdf8);
+        }
+        .leave-form-card h3 {
+            font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.15rem;
+            color: var(--text); margin-bottom: 6px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .leave-form-card h3 i { color: #9FE870; }
+        .leave-form-card .sub { font-size: .82rem; color: var(--text-muted); margin-bottom: 24px; }
+
+        .leave-type-selector { display: flex; gap: 12px; margin-bottom: 20px; }
+        .leave-type-option {
+            flex: 1; padding: 16px; border-radius: 12px;
+            border: 1.5px solid var(--border); background: var(--surface-2, #1a2535);
+            cursor: pointer; text-align: center; transition: all .25s;
+        }
+        .leave-type-option:hover { border-color: rgba(159,232,112,.4); }
+        .leave-type-option.selected {
+            border-color: #9FE870; background: rgba(159,232,112,.08);
+            box-shadow: 0 0 20px rgba(159,232,112,.1);
+        }
+        .leave-type-option .type-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; margin: 0 auto 10px;
+        }
+        .leave-type-option.selected .type-icon { background: rgba(159,232,112,.15); color: #9FE870; }
+        .leave-type-option .type-icon { background: var(--surface-3, #1f2937); color: var(--text-muted); }
+        .leave-type-option .type-label { font-weight: 600; font-size: .88rem; color: var(--text); }
+        .leave-type-option .type-desc { font-size: .72rem; color: var(--text-muted); margin-top: 3px; }
+
+        .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+        .date-group label {
+            display: block; font-size: .78rem; font-weight: 600;
+            color: var(--text-muted); margin-bottom: 6px; font-family: 'Outfit', sans-serif;
+        }
+        .date-group input, .reason-input {
+            width: 100%; padding: 12px 14px; border-radius: 10px;
+            border: 1.5px solid var(--border); background: var(--surface-2, #1a2535);
+            color: var(--text); font-family: 'Outfit', sans-serif; font-size: .88rem;
+            transition: border-color .2s;
+        }
+        .date-group input:focus, .reason-input:focus { outline: none; border-color: #9FE870; }
+        .reason-input { resize: vertical; min-height: 80px; margin-bottom: 18px; }
+
+        .days-display {
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(159,232,112,.06); border: 1px solid rgba(159,232,112,.15);
+            border-radius: 10px; padding: 12px 16px; margin-bottom: 20px;
+        }
+        .days-display .days-num {
+            font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.6rem; color: #9FE870;
+        }
+        .days-display .days-label { font-size: .82rem; color: var(--text-muted); }
+
+        .apply-btn {
+            width: 100%; padding: 16px; border-radius: 12px; border: none;
+            background: linear-gradient(135deg, #9FE870, #6ee65a); color: #111;
+            font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1rem;
+            cursor: pointer; transition: all .25s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .apply-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(159,232,112,.3); }
+        .apply-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* ═══════ LEAVE HISTORY ═══════ */
+        .leave-history-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 20px; padding: 30px;
+        }
+        .leave-history-card h3 {
+            font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.15rem;
+            color: var(--text); margin-bottom: 20px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .leave-history-card h3 i { color: #38bdf8; }
+
+        .leave-item {
+            background: var(--surface-2, #1a2535); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px; margin-bottom: 12px;
+            border-left: 3px solid var(--text-muted); transition: all .2s;
+        }
+        .leave-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+        .leave-item.pending { border-left-color: #facc15; }
+        .leave-item.approved { border-left-color: #22c55e; }
+        .leave-item.rejected { border-left-color: #ef4444; }
+        .leave-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .leave-item-header strong { font-size: .92rem; color: var(--text); }
+        .leave-item-meta { font-size: .78rem; color: var(--text-muted); line-height: 1.6; }
+        .leave-item-meta i { width: 16px; color: var(--text-muted, #6b7280); margin-right: 4px; }
+
+        .empty-state {
+            text-align: center; padding: 40px 20px; color: var(--text-muted);
+        }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; opacity: .3; }
+        .empty-state p { font-size: .88rem; }
+    </style>
+</head>
+<body data-page="driver-leave">
+
+    <main class="main-content">
+        <section class="page active">
+            <div class="leave-layout">
+
+                <!-- LEFT: Leave Application Form -->
+                <div class="leave-form-card">
+                    <h3><i class="fas fa-calendar-check"></i> Apply for Leave</h3>
+                    <p class="sub">Fill in the details below to submit your leave request to the depot manager.</p>
+
+                    <form id="leaveForm">
+                        <!-- Leave Type Selector -->
+                        <div class="leave-type-selector">
+                            <div class="leave-type-option selected" data-type="Full Day" onclick="selectLeaveType(this)">
+                                <div class="type-icon"><i class="fas fa-sun"></i></div>
+                                <div class="type-label">Full Day</div>
+                                <div class="type-desc">Entire working day</div>
+                            </div>
+                            <div class="leave-type-option" data-type="Half Day" onclick="selectLeaveType(this)">
+                                <div class="type-icon"><i class="fas fa-cloud-sun"></i></div>
+                                <div class="type-label">Half Day</div>
+                                <div class="type-desc">Morning or afternoon</div>
+                            </div>
+                        </div>
+
+                        <!-- Date Range -->
+                        <div class="date-row">
+                            <div class="date-group">
+                                <label>From Date</label>
+                                <input type="date" id="fromDate" required>
+                            </div>
+                            <div class="date-group">
+                                <label>To Date</label>
+                                <input type="date" id="toDate" required>
+                            </div>
+                        </div>
+
+                        <!-- Days Display -->
+                        <div class="days-display">
+                            <div class="days-num" id="totalDays">0</div>
+                            <div class="days-label">Total Day(s) of Leave</div>
+                        </div>
+
+                        <!-- Reason -->
+                        <textarea class="reason-input" id="leaveReason" placeholder="Reason for leave (optional)..."></textarea>
+
+                        <!-- Submit -->
+                        <button type="submit" class="apply-btn" id="applyBtn">
+                            <i class="fas fa-paper-plane"></i> Submit Leave Request
+                        </button>
+                    </form>
+                </div>
+
+                <!-- RIGHT: My Leave History -->
+                <div class="leave-history-card">
+                    <h3><i class="fas fa-history"></i> My Leave History</h3>
+                    <div id="leaveHistoryList">
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>No leave requests yet.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <script src="../components/ui.js"></script>
+    <script src="../components/api.js"></script>
+    <script>
+        let selectedLeaveType = 'Full Day';
+
+        // ═══════════ LEAVE TYPE SELECTOR ═══════════
+        function selectLeaveType(el) {
+            document.querySelectorAll('.leave-type-option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedLeaveType = el.dataset.type;
+            calculateDays();
+        }
+
+        // ═══════════ DATE CALCULATION ═══════════
+        const fromDateInput = document.getElementById('fromDate');
+        const toDateInput = document.getElementById('toDate');
+
+        // Set min date to today
+        const today = new Date().toISOString().split('T')[0];
+        fromDateInput.min = today;
+        toDateInput.min = today;
+
+        fromDateInput.addEventListener('change', () => {
+            toDateInput.min = fromDateInput.value;
+            if (toDateInput.value && toDateInput.value < fromDateInput.value) {
+                toDateInput.value = fromDateInput.value;
+            }
+            calculateDays();
+        });
+        toDateInput.addEventListener('change', calculateDays);
+
+        function calculateDays() {
+            const from = fromDateInput.value;
+            const to = toDateInput.value;
+            if (!from || !to) { document.getElementById('totalDays').textContent = '0'; return; }
+
+            const diffTime = new Date(to) - new Date(from);
+            let days = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            if (days < 1) days = 0;
+            if (selectedLeaveType === 'Half Day') days = Math.ceil(days * 0.5);
+
+            document.getElementById('totalDays').textContent = days;
+        }
+
+        // ═══════════ SUBMIT LEAVE ═══════════
+        document.getElementById('leaveForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const from = fromDateInput.value;
+            const to = toDateInput.value;
+            const totalDays = parseInt(document.getElementById('totalDays').textContent);
+            const reason = document.getElementById('leaveReason').value.trim();
+
+            if (!from || !to || totalDays < 1) {
+                UI.showAlert('Please select valid dates', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('applyBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+            const res = await API.fetch('/leaves', {
+                method: 'POST',
+                body: JSON.stringify({
+                    leaveType: selectedLeaveType,
+                    fromDate: from,
+                    toDate: to,
+                    totalDays,
+                    reason
+                })
+            });
+
+            if (res) {
+                UI.showAlert('Leave request submitted successfully! ✅');
+                document.getElementById('leaveForm').reset();
+                document.getElementById('totalDays').textContent = '0';
+                loadMyLeaves();
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Leave Request';
+        };
+
+        // ═══════════ LOAD MY LEAVES ═══════════
+        async function loadMyLeaves() {
+            const leaves = await API.fetch('/leaves/my');
+            const container = document.getElementById('leaveHistoryList');
+
+            if (!leaves || leaves.length === 0) {
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>No leave requests yet.</p></div>`;
+                return;
+            }
+
+            container.innerHTML = leaves.map(l => {
+                const statusClass = l.status.toLowerCase();
+                const badgeClass = l.status === 'Approved' ? 'badge-green' : l.status === 'Rejected' ? 'badge-red' : 'badge-yellow';
+                const from = new Date(l.fromDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                const to = new Date(l.toDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                return `
+                    <div class="leave-item ${statusClass}">
+                        <div class="leave-item-header">
+                            <strong>${l.leaveType} — ${l.totalDays} day(s)</strong>
+                            <span class="badge ${badgeClass}">${l.status}</span>
+                        </div>
+                        <div class="leave-item-meta">
+                            <div><i class="fas fa-calendar"></i> ${from} → ${to}</div>
+                            ${l.reason ? `<div><i class="fas fa-comment"></i> ${l.reason}</div>` : ''}
+                            ${l.reviewedBy ? `<div><i class="fas fa-user-check"></i> Reviewed by: ${l.reviewedBy}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load on page ready
+        document.addEventListener('DOMContentLoaded', loadMyLeaves);
+    </script>
+</body>
+</html>

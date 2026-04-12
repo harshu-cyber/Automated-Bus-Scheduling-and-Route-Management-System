@@ -22,6 +22,62 @@
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
         .bus-marker-label { background: white; border: 1px solid #111; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; color: #111; text-align: center; }
         @media (max-width: 768px) { .passenger-main { grid-template-columns: 1fr; } #liveMap { height: 300px; } }
+
+        /* Share Ride Modal */
+        .share-modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(6px);
+            display: none; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .share-modal-overlay.open { display: flex; }
+        .share-modal {
+            background: var(--card, #111827); border: 1px solid var(--border, #1f2937);
+            border-radius: 20px; width: 90%; max-width: 420px; padding: 30px;
+            box-shadow: 0 8px 40px rgba(0,0,0,.5); animation: modalPop .25s ease;
+            text-align: center;
+        }
+        @keyframes modalPop { from{opacity:0;transform:scale(.92) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        .share-modal h3 { font-family: 'Outfit',sans-serif; font-weight: 700; font-size: 1.15rem; margin-bottom: 6px; }
+        .share-modal .share-sub { font-size: .82rem; color: var(--text-muted, #6b7280); margin-bottom: 22px; }
+        .share-bus-info {
+            background: rgba(159,232,112,.08); border: 1px solid rgba(159,232,112,.2);
+            border-radius: 12px; padding: 14px 18px; margin-bottom: 22px;
+            display: flex; align-items: center; justify-content: center; gap: 14px;
+            font-size: .88rem;
+        }
+        .share-bus-info .bus-icon {
+            width: 42px; height: 42px; background: #9FE870; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: #111;
+        }
+        .share-bus-info .bus-details { text-align: left; }
+        .share-bus-info .bus-details strong { color: var(--text, #e5e7eb); display: block; font-size: .92rem; }
+        .share-bus-info .bus-details small { color: var(--text-muted, #6b7280); font-size: .76rem; }
+        .share-actions { display: flex; flex-direction: column; gap: 10px; }
+        .share-btn {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            padding: 14px 20px; border-radius: 12px; border: none;
+            font-family: 'Outfit',sans-serif; font-weight: 600; font-size: .92rem;
+            cursor: pointer; transition: all .2s; width: 100%;
+        }
+        .share-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .share-btn.whatsapp { background: #25D366; color: white; }
+        .share-btn.sms { background: #38bdf8; color: white; }
+        .share-btn.copy-link { background: var(--surface-2, #1a2535); color: var(--text, #e5e7eb); border: 1px solid var(--border, #1f2937); }
+        .share-btn.copy-link.copied { background: rgba(34,197,94,.15); color: #22c55e; border-color: #22c55e; }
+        .share-close {
+            margin-top: 14px; background: none; border: none;
+            color: var(--text-muted, #6b7280); font-size: .82rem;
+            cursor: pointer; font-family: 'Outfit',sans-serif;
+        }
+        .share-close:hover { color: var(--text, #e5e7eb); }
+        .share-ride-btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 8px; border: none;
+            background: rgba(159,232,112,.12); color: #9FE870;
+            font-size: .72rem; font-weight: 600; cursor: pointer;
+            font-family: 'Outfit',sans-serif; transition: all .2s;
+        }
+        .share-ride-btn:hover { background: rgba(159,232,112,.25); transform: translateY(-1px); }
     </style>
 </head>
 <body data-page="passenger-home">
@@ -44,9 +100,9 @@
                     <div class="table-card" style="margin-top: 30px; background: transparent; padding: 0;">
                         <h4>Nearby Arrivals</h4>
                         <table class="data-table" style="font-size: 13px;">
-                            <thead><tr><th>Route</th><th>Bus</th><th>Driver</th><th>Tracking</th></tr></thead>
+                            <thead><tr><th>Route</th><th>Bus</th><th>Driver</th><th>Tracking</th><th>Share</th></tr></thead>
                             <tbody id="liveStatusBody">
-                                <tr><td colspan="4" style="text-align:center; padding: 20px; color: var(--text-muted);">Waiting for live updates...</td></tr>
+                                <tr><td colspan="5" style="text-align:center; padding: 20px; color: var(--text-muted);">Waiting for live updates...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -56,6 +112,33 @@
             </div>
         </section>
     </main>
+
+    <!-- Share My Ride Modal -->
+    <div class="share-modal-overlay" id="shareModalOverlay">
+        <div class="share-modal">
+            <h3><i class="fas fa-share-alt" style="color:#9FE870; margin-right:8px;"></i>Share My Ride</h3>
+            <p class="share-sub">Send a live tracking link to friends or family.</p>
+            <div class="share-bus-info">
+                <div class="bus-icon"><i class="fas fa-bus"></i></div>
+                <div class="bus-details">
+                    <strong id="shareBusNo">—</strong>
+                    <small id="shareRouteInfo">—</small>
+                </div>
+            </div>
+            <div class="share-actions">
+                <button class="share-btn whatsapp" id="shareWhatsApp">
+                    <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Share via WhatsApp
+                </button>
+                <button class="share-btn sms" id="shareSMS">
+                    <i class="fas fa-sms" style="font-size:1.1rem;"></i> Share via SMS
+                </button>
+                <button class="share-btn copy-link" id="shareCopyLink">
+                    <i class="fas fa-link"></i> Copy Tracking Link
+                </button>
+            </div>
+            <button class="share-close" onclick="closeShareModal()">Cancel</button>
+        </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../components/ui.js"></script>
@@ -73,8 +156,18 @@
                 updateTable(data);
             });
             
-            document.getElementById('searchBtn').onclick = () => {
-                const query = document.getElementById('routeSearch').value.trim();
+            const routeSearchInput = document.getElementById('routeSearch');
+            const searchBtn = document.getElementById('searchBtn');
+
+            routeSearchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchBtn.click();
+                }
+            });
+
+            searchBtn.onclick = () => {
+                const query = routeSearchInput.value.trim();
                 if (!query) { UI.showAlert('Please enter a route or stop name', 'error'); return; }
                 // Filter table rows by route name
                 const rows = document.querySelectorAll('#liveStatusBody tr');
@@ -130,8 +223,87 @@
                 <td>Active</td>
                 <td>${data.driverName}</td>
                 <td><span class="badge badge-green">LIVE</span></td>
+                <td>
+                    <button class="share-ride-btn" onclick="openShareModal('${data.busRegNo}', '${data.driverName}')">
+                        <i class="fas fa-share-alt"></i> Share
+                    </button>
+                </td>
             `;
         }
+
+        // ═══════════ SHARE MY RIDE LOGIC ═══════════
+        let currentShareBus = '';
+        let currentShareDriver = '';
+
+        function openShareModal(busRegNo, driver) {
+            currentShareBus = busRegNo;
+            currentShareDriver = driver;
+            document.getElementById('shareBusNo').textContent = busRegNo;
+            document.getElementById('shareRouteInfo').textContent = `Driver: ${driver} • Live Tracking`;
+            document.getElementById('shareModalOverlay').classList.add('open');
+
+            // Reset copy button state
+            const copyBtn = document.getElementById('shareCopyLink');
+            copyBtn.classList.remove('copied');
+            copyBtn.innerHTML = '<i class="fas fa-link"></i> Copy Tracking Link';
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModalOverlay').classList.remove('open');
+        }
+
+        // Close on overlay click
+        document.getElementById('shareModalOverlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('shareModalOverlay')) closeShareModal();
+        });
+
+        function getTrackingLink() {
+            const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+            const senderName = user.fullName || 'A Passenger';
+            const baseUrl = window.location.origin + window.location.pathname.replace('index.html', 'share-ride.html');
+            return `${baseUrl}?bus=${encodeURIComponent(currentShareBus)}&driver=${encodeURIComponent(currentShareDriver)}&by=${encodeURIComponent(senderName)}`;
+        }
+
+        function getShareMessage() {
+            const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+            const senderName = user.fullName || 'Someone';
+            const link = getTrackingLink();
+            return `🚌 ${senderName} is sharing their live bus ride with you!\n\nBus: ${currentShareBus}\nDriver: ${currentShareDriver}\n\nTrack live here: ${link}`;
+        }
+
+        // WhatsApp Share
+        document.getElementById('shareWhatsApp').addEventListener('click', () => {
+            const msg = getShareMessage();
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+            window.open(whatsappUrl, '_blank');
+            closeShareModal();
+        });
+
+        // SMS Share
+        document.getElementById('shareSMS').addEventListener('click', () => {
+            const msg = getShareMessage();
+            const smsUrl = `sms:?body=${encodeURIComponent(msg)}`;
+            window.open(smsUrl, '_self');
+            closeShareModal();
+        });
+
+        // Copy Link
+        document.getElementById('shareCopyLink').addEventListener('click', async () => {
+            const link = getTrackingLink();
+            try {
+                await navigator.clipboard.writeText(link);
+                const btn = document.getElementById('shareCopyLink');
+                btn.classList.add('copied');
+                btn.innerHTML = '<i class="fas fa-check"></i> Link Copied!';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = '<i class="fas fa-link"></i> Copy Tracking Link';
+                }, 2500);
+            } catch (err) {
+                // Fallback for older browsers
+                prompt('Copy this tracking link:', link);
+            }
+        });
     </script>
 </body>
 </html>

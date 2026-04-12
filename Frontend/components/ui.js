@@ -20,11 +20,15 @@ const UI = {
                 { name: 'Depot Dashboard', icon: 'fas fa-warehouse', link: '../DepotManager/index.html', id: 'depot-dashboard' },
                 { name: 'Assigned Buses', icon: 'fas fa-bus', link: '../DepotManager/buses.html', id: 'depot-buses' },
                 { name: 'Schedules', icon: 'fas fa-calendar-check', link: '../DepotManager/schedules.html', id: 'depot-schedules' },
+                { name: 'Routes', icon: 'fas fa-route', link: '../DepotManager/routes.html', id: 'routes' },
+                { name: 'Leaves', icon: 'fas fa-calendar-minus', link: '../DepotManager/leaves.html', id: 'depot-leaves' },
                 { name: 'Profile', icon: 'fas fa-user-cog', link: '../DepotManager/profile.html', id: 'profile' }
             ],
             driver: [
                 { name: 'My Trips', icon: 'fas fa-road', link: '../Driver/index.html', id: 'driver-trips' },
                 { name: 'Active Duty', icon: 'fas fa-bus-alt', link: '../Driver/duty.html', id: 'driver-duty' },
+                { name: 'Routes', icon: 'fas fa-route', link: '../Driver/routes.html', id: 'routes' },
+                { name: 'Apply Leave', icon: 'fas fa-calendar-minus', link: '../Driver/leave.html', id: 'driver-leave' },
                 { name: 'Profile', icon: 'fas fa-user-cog', link: '../Driver/profile.html', id: 'profile' }
             ],
             passenger: [

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Requests - DTCSL Depot Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../Admin/admin.css">
+    <style>
+        .leave-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        @media (max-width: 768px) { .leave-stats { grid-template-columns: 1fr 1fr; } }
+
+        .leave-stat-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 14px;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .leave-stat-card:hover { transform: translateY(-3px); box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+        .leave-stat-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;
+        }
+        .leave-stat-num { font-family: 'Outfit',sans-serif; font-weight: 700; font-size: 1.5rem; color: var(--text); line-height: 1; }
+        .leave-stat-label { font-size: .78rem; color: var(--text-muted); margin-top: 3px; }
+
+        /* Filter Tabs */
+        .filter-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-tab {
+            padding: 8px 18px; border-radius: 99px; border: 1px solid var(--border);
+            background: var(--surface-2, #1a2535); color: var(--text-muted);
+            font-family: 'Outfit',sans-serif; font-weight: 600; font-size: .82rem;
+            cursor: pointer; transition: all .2s;
+        }
+        .filter-tab:hover { border-color: var(--accent); color: var(--accent); }
+        .filter-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+        /* Leave Request Cards */
+        .leave-requests-grid { display: flex; flex-direction: column; gap: 14px; }
+        .leave-request-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 20px; transition: all .2s; flex-wrap: wrap;
+        }
+        .leave-request-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.25); transform: translateY(-2px); }
+        .leave-request-card.pending { border-left: 4px solid #facc15; }
+        .leave-request-card.approved { border-left: 4px solid #22c55e; }
+        .leave-request-card.rejected { border-left: 4px solid #ef4444; }
+
+        .leave-req-left { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 200px; }
+        .leave-req-avatar {
+            width: 44px; height: 44px; border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dim, #6ee65a));
+            display: flex; align-items: center; justify-content: center;
+            color: var(--bg); font-family: 'Outfit',sans-serif; font-weight: 700; font-size: 1rem; flex-shrink: 0;
+        }
+        .leave-req-info h4 { font-family: 'Outfit',sans-serif; font-weight: 600; font-size: .92rem; color: var(--text); margin-bottom: 3px; }
+        .leave-req-info p { font-size: .78rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+        .leave-req-info p i { font-size: .72rem; }
+
+        .leave-req-center { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+        .leave-detail { text-align: center; }
+        .leave-detail .detail-val { font-family: 'Outfit',sans-serif; font-weight: 700; font-size: .92rem; color: var(--text); }
+        .leave-detail .detail-label { font-size: .68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+
+        .leave-req-actions { display: flex; gap: 8px; }
+        .action-btn {
+            padding: 8px 18px; border-radius: 10px; border: none;
+            font-family: 'Outfit',sans-serif; font-weight: 600; font-size: .82rem;
+            cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 6px;
+        }
+        .action-btn:hover { transform: translateY(-1px); }
+        .action-btn.approve { background: rgba(34,197,94,.12); color: #22c55e; }
+        .action-btn.approve:hover { background: #22c55e; color: white; }
+        .action-btn.reject { background: rgba(239,68,68,.12); color: #ef4444; }
+        .action-btn.reject:hover { background: #ef4444; color: white; }
+
+        .empty-leaves {
+            text-align: center; padding: 50px; color: var(--text-muted);
+        }
+        .empty-leaves i { font-size: 3rem; margin-bottom: 14px; opacity: .25; }
+    </style>
+</head>
+<body data-page="depot-leaves">
+
+    <main class="main-content">
+        <section class="page active">
+            <div class="page-header" style="margin-bottom:24px;">
+                <h2 style="color:var(--text); font-family:'Outfit',sans-serif; font-weight:700;">Leave Requests</h2>
+                <p style="color:var(--text-muted); font-size: .88rem;">Review and manage driver leave applications.</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="leave-stats">
+                <div class="leave-stat-card">
+                    <div class="leave-stat-icon" style="background:rgba(250,204,21,.12);color:#facc15"><i class="fas fa-clock"></i></div>
+                    <div><div class="leave-stat-num" id="statPending">0</div><div class="leave-stat-label">Pending</div></div>
+                </div>
+                <div class="leave-stat-card">
+                    <div class="leave-stat-icon" style="background:rgba(34,197,94,.12);color:#22c55e"><i class="fas fa-check-circle"></i></div>
+                    <div><div class="leave-stat-num" id="statApproved">0</div><div class="leave-stat-label">Approved</div></div>
+                </div>
+                <div class="leave-stat-card">
+                    <div class="leave-stat-icon" style="background:rgba(239,68,68,.12);color:#ef4444"><i class="fas fa-times-circle"></i></div>
+                    <div><div class="leave-stat-num" id="statRejected">0</div><div class="leave-stat-label">Rejected</div></div>
+                </div>
+                <div class="leave-stat-card">
+                    <div class="leave-stat-icon" style="background:rgba(159,232,112,.12);color:#9FE870"><i class="fas fa-list-alt"></i></div>
+                    <div><div class="leave-stat-num" id="statTotal">0</div><div class="leave-stat-label">Total Requests</div></div>
+                </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="all" onclick="filterLeaves('all', this)">All</button>
+                <button class="filter-tab" data-filter="Pending" onclick="filterLeaves('Pending', this)">⏳ Pending</button>
+                <button class="filter-tab" data-filter="Approved" onclick="filterLeaves('Approved', this)">✅ Approved</button>
+                <button class="filter-tab" data-filter="Rejected" onclick="filterLeaves('Rejected', this)">❌ Rejected</button>
+            </div>
+
+            <!-- Leave Cards -->
+            <div class="leave-requests-grid" id="leaveRequestsGrid">
+                <div class="empty-leaves">
+                    <i class="fas fa-inbox"></i>
+                    <p>Loading leave requests...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../components/ui.js"></script>
+    <script src="../components/api.js"></script>
+    <script>
+        let allLeaves = [];
+        let currentFilter = 'all';
+
+        document.addEventListener('DOMContentLoaded', loadLeaves);
+
+        async function loadLeaves() {
+            const data = await API.fetch('/leaves');
+            allLeaves = data || [];
+            updateStats();
+            renderLeaves();
+        }
+
+        function updateStats() {
+            const pending = allLeaves.filter(l => l.status === 'Pending').length;
+            const approved = allLeaves.filter(l => l.status === 'Approved').length;
+            const rejected = allLeaves.filter(l => l.status === 'Rejected').length;
+            document.getElementById('statPending').textContent = pending;
+            document.getElementById('statApproved').textContent = approved;
+            document.getElementById('statRejected').textContent = rejected;
+            document.getElementById('statTotal').textContent = allLeaves.length;
+        }
+
+        function filterLeaves(filter, btn) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            renderLeaves();
+        }
+
+        function renderLeaves() {
+            const grid = document.getElementById('leaveRequestsGrid');
+            let filtered = currentFilter === 'all' ? allLeaves : allLeaves.filter(l => l.status === currentFilter);
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="empty-leaves"><i class="fas fa-inbox"></i><p>No ${currentFilter === 'all' ? '' : currentFilter.toLowerCase() + ' '}leave requests found.</p></div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(l => {
+                const from = new Date(l.fromDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                const to = new Date(l.toDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                const initial = (l.driverName || 'D').charAt(0).toUpperCase();
+                const statusClass = l.status.toLowerCase();
+                const badgeClass = l.status === 'Approved' ? 'badge-green' : l.status === 'Rejected' ? 'badge-red' : 'badge-yellow';
+                const isPending = l.status === 'Pending';
+
+                return `
+                    <div class="leave-request-card ${statusClass}">
+                        <div class="leave-req-left">
+                            <div class="leave-req-avatar">${initial}</div>
+                            <div class="leave-req-info">
+                                <h4>${l.driverName}</h4>
+                                <p><i class="fas fa-calendar-alt"></i> ${from} → ${to}</p>
+                                ${l.reason ? `<p><i class="fas fa-comment-dots"></i> ${l.reason}</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="leave-req-center">
+                            <div class="leave-detail">
+                                <div class="detail-val">${l.leaveType}</div>
+                                <div class="detail-label">Type</div>
+                            </div>
+                            <div class="leave-detail">
+                                <div class="detail-val">${l.totalDays}</div>
+                                <div class="detail-label">Day(s)</div>
+                            </div>
+                            <div class="leave-detail">
+                                <span class="badge ${badgeClass}">${l.status}</span>
+                            </div>
+                        </div>
+                        <div class="leave-req-actions">
+                            ${isPending ? `
+                                <button class="action-btn approve" onclick="updateLeave('${l._id}', 'Approved')">
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                                <button class="action-btn reject" onclick="updateLeave('${l._id}', 'Rejected')">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
+                            ` : `
+                                <span style="font-size:.78rem; color:var(--text-muted);">
+                                    ${l.reviewedBy ? `Reviewed by ${l.reviewedBy}` : ''}
+                                </span>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function updateLeave(id, status) {
+            const action = status === 'Approved' ? 'approve' : 'reject';
+            if (!confirm(`Are you sure you want to ${action} this leave request?`)) return;
+
+            const res = await API.fetch(`/leaves/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ status })
+            });
+
+            if (res) {
+                UI.showAlert(`Leave ${status.toLowerCase()} successfully!`);
+                loadLeaves();
+            }
+        }
+    </script>
+</body>
+</html>

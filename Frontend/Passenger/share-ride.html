@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Ride Tracking - DTCSL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --bg: #0b0f0c;
+            --card: #111827;
+            --text: #e5e7eb;
+            --border: #1f2937;
+            --accent: #9FE870;
+            --accent-dim: #6ee65a;
+            --text-muted: #6b7280;
+            --font-d: 'Outfit', sans-serif;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-d);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ═══════ HEADER ═══════ */
+        .share-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--card);
+        }
+        .share-header .logo {
+            display: flex; align-items: center; gap: 10px;
+            font-weight: 800; font-size: 1.3rem; color: var(--text);
+        }
+        .share-header .logo-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--bg); font-size: 1.1rem;
+        }
+        .live-badge {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(34,197,94,.12);
+            color: #22c55e;
+            padding: 6px 16px;
+            border-radius: 99px;
+            font-weight: 700;
+            font-size: .82rem;
+        }
+        .live-badge .dot {
+            width: 8px; height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+        /* ═══════ INFO STRIP ═══════ */
+        .ride-info-strip {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 18px 24px;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .info-chip {
+            display: flex; align-items: center; gap: 8px;
+            font-size: .88rem;
+            color: var(--text-muted);
+        }
+        .info-chip i { color: var(--accent); font-size: .9rem; }
+        .info-chip strong { color: var(--text); font-weight: 700; }
+
+        /* ═══════ MAP ═══════ */
+        #trackMap {
+            flex: 1;
+            min-height: 400px;
+        }
+
+        /* ═══════ BOTTOM CARD ═══════ */
+        .eta-card {
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .eta-left {
+            display: flex; align-items: center; gap: 16px;
+        }
+        .eta-icon {
+            width: 50px; height: 50px;
+            background: rgba(159,232,112,.12);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; color: var(--accent);
+        }
+        .eta-text h3 { font-weight: 700; font-size: 1.1rem; color: var(--text); }
+        .eta-text p { font-size: .82rem; color: var(--text-muted); margin-top: 2px; }
+        .eta-time {
+            font-family: var(--font-d);
+            font-weight: 800;
+            font-size: 1.8rem;
+            color: var(--accent);
+            letter-spacing: -1px;
+        }
+        .eta-time small { font-size: .7rem; font-weight: 500; color: var(--text-muted); display: block; }
+
+        /* ═══════ WAITING STATE ═══════ */
+        .waiting-overlay {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1000;
+            background: var(--card);
+            padding: 30px 40px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0,0,0,.4);
+        }
+        .waiting-overlay i { font-size: 2rem; color: var(--accent); margin-bottom: 12px; animation: spin 2s linear infinite; }
+        @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+        .waiting-overlay h3 { font-size: 1rem; margin-bottom: 6px; }
+        .waiting-overlay p { font-size: .82rem; color: var(--text-muted); }
+
+        @media (max-width: 600px) {
+            .ride-info-strip { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .eta-card { flex-direction: column; text-align: center; }
+            .eta-left { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="share-header">
+        <div class="logo">
+            <div class="logo-icon"><i class="fas fa-bus"></i></div>
+            <span>DTCSL Ride Tracker</span>
+        </div>
+        <div class="live-badge">
+            <div class="dot"></div>
+            <span>LIVE TRACKING</span>
+        </div>
+    </div>
+
+    <!-- Info Strip (populated by JS) -->
+    <div class="ride-info-strip" id="rideInfoStrip">
+        <div class="info-chip"><i class="fas fa-bus"></i> Bus: <strong id="infoBus">—</strong></div>
+        <div class="info-chip"><i class="fas fa-route"></i> Route: <strong id="infoRoute">—</strong></div>
+        <div class="info-chip"><i class="fas fa-user"></i> Driver: <strong id="infoDriver">—</strong></div>
+        <div class="info-chip"><i class="fas fa-clock"></i> Last Update: <strong id="infoTime">—</strong></div>
+    </div>
+
+    <!-- Map -->
+    <div style="flex:1; position:relative;">
+        <div id="trackMap"></div>
+        <div class="waiting-overlay" id="waitingOverlay">
+            <i class="fas fa-satellite-dish"></i>
+            <h3>Connecting to bus...</h3>
+            <p>Waiting for live location data from the bus.</p>
+        </div>
+    </div>
+
+    <!-- ETA Card -->
+    <div class="eta-card">
+        <div class="eta-left">
+            <div class="eta-icon"><i class="fas fa-map-marker-alt"></i></div>
+            <div class="eta-text">
+                <h3 id="etaTitle">Tracking Bus</h3>
+                <p id="etaSubtitle">Shared ride link — real-time location visible to anyone with this link.</p>
+            </div>
+        </div>
+        <div class="eta-time" id="etaDisplay">
+            --:--
+            <small>Estimated ETA</small>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // ═══════════ PARSE URL PARAMS ═══════════
+        const params = new URLSearchParams(window.location.search);
+        const busRegNo = params.get('bus') || '';
+        const routeId  = params.get('route') || '';
+        const driverName = params.get('driver') || '';
+        const sharedBy = params.get('by') || 'A Passenger';
+
+        // Populate info strip
+        document.getElementById('infoBus').textContent = busRegNo || '—';
+        document.getElementById('infoRoute').textContent = routeId || '—';
+        document.getElementById('infoDriver').textContent = driverName || '—';
+        document.getElementById('etaTitle').textContent = `Tracking Bus ${busRegNo}`;
+        document.getElementById('etaSubtitle').textContent = `Shared by ${sharedBy} — live location updates via Socket.io`;
+
+        // ═══════════ MAP SETUP ═══════════
+        const map = L.map('trackMap').setView([28.6139, 77.2090], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        let busMarker = null;
+        let updateCount = 0;
+        let lastUpdateTime = null;
+
+        // ═══════════ SOCKET CONNECTION ═══════════
+        const SOCKET_SERVER = 'http://localhost:5005';
+        const socket = io(SOCKET_SERVER);
+
+        socket.on('connect', () => {
+            console.log('[ShareRide] Connected to tracking server');
+        });
+
+        socket.on('receiveLocation', (data) => {
+            // Only track the specific bus
+            if (data.busRegNo !== busRegNo) return;
+
+            const { lat, lng, timestamp } = data;
+            updateCount++;
+
+            // Hide waiting overlay on first update
+            const overlay = document.getElementById('waitingOverlay');
+            if (overlay) overlay.style.display = 'none';
+
+            // Update or create marker
+            if (busMarker) {
+                busMarker.setLatLng([lat, lng]);
+            } else {
+                const icon = L.divIcon({
+                    className: 'custom-bus-icon',
+                    html: `<div style="background:#000; color:#9FE870; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px solid #9FE870; font-size:20px; box-shadow: 0 0 20px rgba(159,232,112,0.4);">🚌</div>`,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
+                });
+                busMarker = L.marker([lat, lng], { icon }).addTo(map)
+                    .bindPopup(`<b>Bus: ${busRegNo}</b><br>Driver: ${driverName || data.driverName}`);
+            }
+
+            // Center map on bus
+            map.panTo([lat, lng]);
+
+            // Update timestamp
+            const now = new Date(timestamp || Date.now());
+            lastUpdateTime = now;
+            document.getElementById('infoTime').textContent = now.toLocaleTimeString();
+
+            // Update driver name if provided
+            if (data.driverName && data.driverName !== '—') {
+                document.getElementById('infoDriver').textContent = data.driverName;
+            }
+
+            // Simulated ETA (minutes based on update count — in a real app this would use route distance)
+            const etaMinutes = Math.max(2, 25 - updateCount);
+            document.getElementById('etaDisplay').innerHTML = `${etaMinutes} min<small>Estimated ETA</small>`;
+        });
+
+        socket.on('disconnect', () => {
+            console.warn('[ShareRide] Disconnected from server');
+        });
+
+        // Update "last update" every second to show staleness
+        setInterval(() => {
+            if (!lastUpdateTime) return;
+            const seconds = Math.floor((Date.now() - lastUpdateTime.getTime()) / 1000);
+            if (seconds > 10) {
+                document.getElementById('infoTime').textContent = `${seconds}s ago`;
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
