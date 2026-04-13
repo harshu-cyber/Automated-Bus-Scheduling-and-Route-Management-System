@@ -85,22 +85,23 @@ const seedData = async () => {
     console.log('✅ Depots seeded');
 
     // ═══════════ SCHEDULE ═══════════
+    const today = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD
     await Schedule.create([
-        { day: 'Monday',    time: '06:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
-        { day: 'Monday',    time: '07:30', route: 'RT-002', routeName: 'Sarojini Nagar', bus: 'DL-1PA-5678', driver: 'Amit Singh' },
-        { day: 'Monday',    time: '09:00', route: 'RT-003', routeName: 'Chandni Chowk',  bus: 'DL-1PA-9012', driver: 'Suresh Yadav' },
-        { day: 'Tuesday',   time: '06:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-3344', driver: 'Vikram Patel' },
-        { day: 'Tuesday',   time: '07:30', route: 'RT-005', routeName: 'Nehru Place',    bus: 'DL-1PA-7890', driver: 'Mohit Sharma' },
-        { day: 'Tuesday',   time: '10:30', route: 'RT-004', routeName: 'Dwarka',         bus: 'DL-1PA-5566', driver: 'Anil Kumar' },
-        { day: 'Wednesday', time: '06:00', route: 'RT-002', routeName: 'Sarojini Nagar', bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
-        { day: 'Wednesday', time: '07:30', route: 'RT-006', routeName: 'Rohini',         bus: 'DL-1PA-1122', driver: 'Deepak Rawat' },
-        { day: 'Wednesday', time: '09:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-5678', driver: 'Amit Singh' },
-        { day: 'Thursday',  time: '06:00', route: 'RT-003', routeName: 'Chandni Chowk',  bus: 'DL-1PA-3456', driver: 'Vikram Patel' },
-        { day: 'Thursday',  time: '09:00', route: 'RT-005', routeName: 'Nehru Place',    bus: 'DL-1PA-7890', driver: 'Mohit Sharma' },
-        { day: 'Friday',    time: '06:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
-        { day: 'Friday',    time: '07:30', route: 'RT-004', routeName: 'Dwarka',         bus: 'DL-1PA-5566', driver: 'Anil Kumar' },
-        { day: 'Saturday',  time: '06:00', route: 'RT-002', routeName: 'Sarojini Nagar', bus: 'DL-1PA-5678', driver: 'Amit Singh' },
-        { day: 'Sunday',    time: '08:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
+        { date: today, day: 'Monday',    time: '06:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
+        { date: today, day: 'Monday',    time: '07:30', route: 'RT-002', routeName: 'Sarojini Nagar', bus: 'DL-1PA-5678', driver: 'Amit Singh' },
+        { date: today, day: 'Monday',    time: '09:00', route: 'RT-003', routeName: 'Chandni Chowk',  bus: 'DL-1PA-9012', driver: 'Suresh Yadav' },
+        { date: today, day: 'Tuesday',   time: '06:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-3344', driver: 'Vikram Patel' },
+        { date: today, day: 'Tuesday',   time: '07:30', route: 'RT-005', routeName: 'Nehru Place',    bus: 'DL-1PA-7890', driver: 'Mohit Sharma' },
+        { date: today, day: 'Tuesday',   time: '10:30', route: 'RT-004', routeName: 'Dwarka',         bus: 'DL-1PA-5566', driver: 'Anil Kumar' },
+        { date: today, day: 'Wednesday', time: '06:00', route: 'RT-002', routeName: 'Sarojini Nagar', bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
+        { date: today, day: 'Wednesday', time: '07:30', route: 'RT-006', routeName: 'Rohini',         bus: 'DL-1PA-1122', driver: 'Deepak Rawat' },
+        { date: today, day: 'Wednesday', time: '09:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-5678', driver: 'Amit Singh' },
+        { date: today, day: 'Thursday',  time: '06:00', route: 'RT-003', routeName: 'Chandni Chowk',  bus: 'DL-1PA-3456', driver: 'Vikram Patel' },
+        { date: today, day: 'Thursday',  time: '09:00', route: 'RT-005', routeName: 'Nehru Place',    bus: 'DL-1PA-7890', driver: 'Mohit Sharma' },
+        { date: today, day: 'Friday',    time: '06:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
+        { date: today, day: 'Friday',    time: '07:30', route: 'RT-004', routeName: 'Dwarka',         bus: 'DL-1PA-5566', driver: 'Anil Kumar' },
+        { date: today, day: 'Saturday',  time: '06:00', route: 'RT-002', routeName: 'Sarojini Nagar', bus: 'DL-1PA-5678', driver: 'Amit Singh' },
+        { date: today, day: 'Sunday',    time: '08:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
     ]);
     console.log('✅ Schedule seeded');
 

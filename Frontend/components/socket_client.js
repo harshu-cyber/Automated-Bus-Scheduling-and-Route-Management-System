@@ -2,7 +2,7 @@
 //  DTCSL SHARED SOCKET CLIENT (Real-time Tracking)
 // ═══════════════════════════════════════════════════
 
-const SOCKET_SERVER = 'http://localhost:5005';
+const SOCKET_SERVER = window.location.origin;
 
 const SocketClient = {
     socket: null,

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 require('dotenv').config();
@@ -30,8 +31,16 @@ app.use('/api/depots',    require('./routes/depots'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/leaves',    require('./routes/leaves'));
 
-// Health check
+// ═══════════ STATIC FILES ═══════════
+app.use(express.static(path.join(__dirname, '../Frontend')));
+
+// Root serve landing page
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../Frontend/landing_page.html'));
+});
+
+// Health check
+app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'DTCSL API is running', version: '2.0.0 (Socket.io Enabled)' });
 });
 
