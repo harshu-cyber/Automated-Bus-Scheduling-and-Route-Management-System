@@ -24,6 +24,15 @@ exports.getCrewById = async (req, res) => {
 
 exports.createCrew = async (req, res) => {
     try {
+        // Auto-generate crewId: find the highest existing CR-XXX and increment
+        const lastCrew = await Crew.findOne().sort({ crewId: -1 }).lean();
+        let nextNum = 1;
+        if (lastCrew && lastCrew.crewId) {
+            const match = lastCrew.crewId.match(/CR-(\d+)/i);
+            if (match) nextNum = parseInt(match[1], 10) + 1;
+        }
+        req.body.crewId = `CR-${String(nextNum).padStart(3, '0')}`;
+
         const member = await Crew.create(req.body);
         res.status(201).json(member);
     } catch (err) {
