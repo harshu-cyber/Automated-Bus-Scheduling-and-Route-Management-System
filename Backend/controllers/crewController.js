@@ -24,16 +24,37 @@ exports.getCrewById = async (req, res) => {
 
 exports.createCrew = async (req, res) => {
     try {
-        // Auto-generate crewId: find the highest existing CR-XXX and increment
-        const lastCrew = await Crew.findOne().sort({ crewId: -1 }).lean();
+        const { role, phone, name } = req.body;
+        if (!phone) {
+            return res.status(400).json({ message: 'Phone number is required to generate credentials' });
+        }
+
+        const isManager = role === 'Depot Manager';
+        const prefix = isManager ? 'DM-' : 'CR-';
+
+        const lastCrew = await Crew.findOne({ crewId: new RegExp(`^${prefix}`, 'i') }).sort({ crewId: -1 }).lean();
         let nextNum = 1;
         if (lastCrew && lastCrew.crewId) {
-            const match = lastCrew.crewId.match(/CR-(\d+)/i);
+            const match = lastCrew.crewId.match(new RegExp(`^${prefix}(\\d+)`, 'i'));
             if (match) nextNum = parseInt(match[1], 10) + 1;
         }
-        req.body.crewId = `CR-${String(nextNum).padStart(3, '0')}`;
+        req.body.crewId = `${prefix}${String(nextNum).padStart(3, '0')}`;
 
         const member = await Crew.create(req.body);
+
+        let userRole = 'driver';
+        if (role === 'Depot Manager') userRole = 'depot';
+        else if (role === 'Conductor') userRole = 'conductor';
+
+        const User = require('../models/User');
+        await User.create({
+            username: req.body.crewId.toLowerCase(),
+            password: phone,
+            role: userRole,
+            fullName: name,
+            phone: phone
+        });
+
         res.status(201).json(member);
     } catch (err) {
         res.status(400).json({ message: 'Invalid data', error: err.message });
