@@ -83,7 +83,7 @@ registerForm.addEventListener('submit', async (e) => {
     const email = inputs[1].value.trim();
     const password = inputs[2].value;
 
-    const role = document.getElementById('reg-role').value;
+    const role = 'passenger';
 
     if (!username || !password) return;
 

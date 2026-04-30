@@ -3,6 +3,7 @@ const Route = require('../models/Route');
 const Bus = require('../models/Bus');
 const Crew = require('../models/Crew');
 const User = require('../models/User');
+const Depot = require('../models/Depot');
 
 // ═══════════════════════════════════════════════════
 //  GET: Fetch all schedule entries
@@ -11,6 +12,7 @@ exports.getAllSchedules = async (req, res) => {
     try {
         const filter = {};
         if (req.query.day) filter.day = req.query.day; // query params
+        if (req.query.depotId) filter.depotId = req.query.depotId; // depot-scoped filter
         const entries = await Schedule.find(filter).sort({ day: 1, time: 1 });
         res.json(entries);
     } catch (err) {
@@ -63,44 +65,67 @@ exports.deleteScheduleEntry = async (req, res) => {
 // ═══════════════════════════════════════════════════
 exports.autoGenerateSchedule = async (req, res) => {
     try {
-        // Fetch ONLY registered (active) resources from database
-        const activeRoutes = await Route.find({ status: 'Active' }).lean();
-        const activeBuses  = await Bus.find({ status: 'Active' }).lean();
-        
-        // Fixed: Crew model only has 'On Duty', 'Off Duty', 'On Leave' statuses
-        // Removed invalid 'Available' status
-        const availableDrivers = await Crew.find({ 
-            role: 'Driver', 
-            status: 'On Duty'  // Only drivers currently on duty
+        const { depotId } = req.body;
+
+        // ═══════════════════════════════════════════════
+        // DEPOT VALIDATION: depotId is mandatory
+        // ═══════════════════════════════════════════════
+        if (!depotId) {
+            return res.status(400).json({
+                message: 'depotId is required for schedule generation. Depot-based isolation is enforced.',
+                code: 'MISSING_DEPOT_ID'
+            });
+        }
+
+        const depot = await Depot.findById(depotId).lean();
+        if (!depot) {
+            return res.status(404).json({
+                message: `Depot with ID "${depotId}" not found.`,
+                code: 'DEPOT_NOT_FOUND'
+            });
+        }
+
+        // Fetch ONLY resources belonging to this depot
+        const activeRoutes = await Route.find({ status: 'Active', depotId }).lean();
+        const activeBuses  = await Bus.find({ status: 'Active', depotId }).lean();
+        const availableDrivers = await Crew.find({
+            role: 'Driver',
+            status: 'On Duty',
+            depotId
         }).lean();
 
-        // Validation: Ensure minimum required resources exist
+        // Validation: Ensure minimum required resources exist FOR THIS DEPOT
         if (!activeRoutes.length) {
-            return res.status(400).json({ 
-                message: 'No active routes available for scheduling.',
-                code: 'MISSING_ROUTES'
+            return res.status(400).json({
+                message: `No active routes available for depot "${depot.name}".`,
+                code: 'MISSING_ROUTES',
+                depotId,
+                depotName: depot.name
             });
         }
         if (!activeBuses.length) {
-            return res.status(400).json({ 
-                message: 'No active buses available for scheduling.',
-                code: 'MISSING_BUSES'
+            return res.status(400).json({
+                message: `No active buses available for depot "${depot.name}".`,
+                code: 'MISSING_BUSES',
+                depotId,
+                depotName: depot.name
             });
         }
         if (!availableDrivers.length) {
-            return res.status(400).json({ 
-                message: 'No available drivers for scheduling.',
-                code: 'MISSING_DRIVERS'
+            return res.status(400).json({
+                message: `No available drivers for depot "${depot.name}".`,
+                code: 'MISSING_DRIVERS',
+                depotId,
+                depotName: depot.name
             });
         }
 
         // Get current date and time for daily schedule generation
         const now = new Date();
-        const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+        const currentDate = now.toISOString().split('T')[0];
         const currentHour = now.getHours();
         const currentMinutes = now.getMinutes();
 
-        // Define all possible time slots (24-hour format)
         const allTimeSlots = [
         '05:00', '06:00', '07:00',
         '08:00', '09:00', '10:00',
@@ -109,12 +134,10 @@ exports.autoGenerateSchedule = async (req, res) => {
         '17:00', '18:00', '19:00',
         '20:00', '21:00', '22:00'
         ];
-        
-        // Get day name for today (e.g., "Monday")
+
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = dayNames[now.getDay()];
 
-        // Filter time slots: only include slots from current time until 23:59
         const relevantTimeSlots = allTimeSlots.filter(slot => {
             const [slotHour, slotMinutes] = slot.split(':').map(Number);
             const slotTotalMinutes = slotHour * 60 + slotMinutes;
@@ -122,59 +145,46 @@ exports.autoGenerateSchedule = async (req, res) => {
             return slotTotalMinutes >= currentTotalMinutes;
         });
 
-        // Add 23:00 slot if not already present (to ensure coverage until end of day)
         if (!relevantTimeSlots.includes('23:00') && currentHour < 23) {
             relevantTimeSlots.push('23:00');
         }
 
-        // Validation: Ensure there are available time slots for today
         if (relevantTimeSlots.length === 0) {
-            return res.status(400).json({ 
-                message: 'No available time slots remaining for today. Schedule generation only available before 11:59 PM.',
+            return res.status(400).json({
+                message: 'No available time slots remaining for today.',
                 code: 'NO_TIME_SLOTS'
             });
         }
 
         const generatedEntries = [];
-        
-        // Track resource utilization per time slot to avoid double-booking
-        const resourceState = {}; // { [time]: { buses: Set, drivers: Set } }
-
-        // Track driver work count for today
-        const driverDailyWork = {}; // { [driverName]: count }
+        const resourceState = {};
+        const driverDailyWork = {};
 
         const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
         const shuffledRoutes = shuffle(activeRoutes);
-        
-        // Generate schedule only for today with relevant time slots
+
         let slotIndex = 0;
         for (const time of relevantTimeSlots) {
             const slotKey = `${time}`;
-            resourceState[slotKey] = { 
-                buses: new Set(), 
-                drivers: new Set() 
+            resourceState[slotKey] = {
+                buses: new Set(),
+                drivers: new Set()
             };
 
-            // Rotate routes for this slot — each slot starts from a different route
             const routeOffset = slotIndex % shuffledRoutes.length;
-
-            // How many trips this slot (limited by resources, max 4 concurrent)
             const maxTrips = Math.min(
-                shuffledRoutes.length, 
-                activeBuses.length, 
-                availableDrivers.length, 
+                shuffledRoutes.length,
+                activeBuses.length,
+                availableDrivers.length,
                 4
             );
 
-            // Pick only a subset of routes per slot (rotate which ones)
-            // e.g. with 5 routes and maxTrips=3: slot0→[0,1,2], slot1→[1,2,3], slot2→[2,3,4]
             const tripsThisSlot = Math.min(maxTrips, Math.max(1, Math.ceil(shuffledRoutes.length / 2)));
 
             for (let i = 0; i < tripsThisSlot; i++) {
                 const routeIdx = (routeOffset + i) % shuffledRoutes.length;
                 const route = shuffledRoutes[routeIdx];
-                
-                // Rotate bus selection — offset by slot index
+
                 const busOffset = (slotIndex + i) % activeBuses.length;
                 let bus = null;
                 for (let b = 0; b < activeBuses.length; b++) {
@@ -184,8 +194,7 @@ exports.autoGenerateSchedule = async (req, res) => {
                         break;
                     }
                 }
-                
-                // Rotate driver selection — offset by slot index
+
                 const driverOffset = (slotIndex + i) % availableDrivers.length;
                 let driver = null;
                 for (let d = 0; d < availableDrivers.length; d++) {
@@ -210,6 +219,9 @@ exports.autoGenerateSchedule = async (req, res) => {
                         routeName: route.name,
                         bus: bus.regNo,
                         driver: driver.name,
+                        driverId: driver.crewId,
+                        depot: depot.name,
+                        depotId: depot._id,
                         status: 'Scheduled'
                     });
                 }
@@ -217,26 +229,25 @@ exports.autoGenerateSchedule = async (req, res) => {
             slotIndex++;
         }
 
-        // Validation: Ensure schedule was generated
         if (!generatedEntries.length) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Unable to generate schedule. Insufficient resources.',
                 code: 'GENERATION_FAILED'
             });
         }
 
-        // IMPORTANT: Delete existing unperformed schedules
-        // Only delete non-active schedules to preserve completed ones
-        await Schedule.deleteMany({ status: { $ne: 'Completed' } });
-        
-        // Save generated schedule to database
+        // Delete existing unperformed schedules FOR THIS DEPOT ONLY
+        await Schedule.deleteMany({ depotId: depot._id, status: { $ne: 'Completed' } });
+
         const saved = await Schedule.insertMany(generatedEntries);
 
         res.status(201).json({
-            message: 'Daily schedule auto-generated successfully from registered resources.',
+            message: `Daily schedule auto-generated for depot "${depot.name}" from registered resources.`,
             count: saved.length,
             data: saved,
-            summary: { 
+            summary: {
+                depotId: depot._id,
+                depotName: depot.name,
                 date: currentDate,
                 dayName: dayName,
                 timeSlots: relevantTimeSlots.length,
@@ -248,7 +259,7 @@ exports.autoGenerateSchedule = async (req, res) => {
         });
 
     } catch (err) {
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Auto-generate schedule failed',
             error: err.message,
             code: 'SCHEDULE_GENERATION_ERROR'
@@ -264,7 +275,25 @@ exports.autoGenerateSchedule = async (req, res) => {
 // ═══════════════════════════════════════════════════
 exports.applySchedule = async (req, res) => {
     try {
-        const { scheduleEntries } = req.body;
+        const { scheduleEntries, depotId } = req.body;
+
+        // ═══════════════════════════════════════════════
+        // DEPOT VALIDATION: depotId is mandatory
+        // ═══════════════════════════════════════════════
+        if (!depotId) {
+            return res.status(400).json({
+                message: 'depotId is required. Depot-based isolation is enforced.',
+                code: 'MISSING_DEPOT_ID'
+            });
+        }
+
+        const depot = await Depot.findById(depotId).lean();
+        if (!depot) {
+            return res.status(404).json({
+                message: `Depot with ID "${depotId}" not found.`,
+                code: 'DEPOT_NOT_FOUND'
+            });
+        }
 
         // Validation: Ensure request contains schedule data
         if (!scheduleEntries || !Array.isArray(scheduleEntries)) {
@@ -344,7 +373,7 @@ exports.applySchedule = async (req, res) => {
         }
 
         // ═══════════════════════════════════════════════
-        // STEP 2: Conflict detection (internal scheduling conflicts)
+        // STEP 2: Depot-scoped conflict detection
         // ═══════════════════════════════════════════════
         const conflicts = [];
         const busScheduleByDay = {};
@@ -416,41 +445,58 @@ exports.applySchedule = async (req, res) => {
         }
 
         // ═══════════════════════════════════════════════
-        // STEP 3: Database validation (resource existence)
+        // STEP 3: Database validation + DEPOT ISOLATION CHECK
         // ═══════════════════════════════════════════════
-        const activeBuses = await Bus.find({ status: 'Active' }).select('regNo').lean();
-        const availableDrivers = await Crew.find({ role: 'Driver', status: 'On Duty' }).select('name').lean();
-        const activeRoutes = await Route.find({ status: 'Active' }).select('routeId name').lean();
+        const activeBuses = await Bus.find({ status: 'Active' }).select('regNo depotId').lean();
+        const availableDrivers = await Crew.find({ role: 'Driver', status: 'On Duty' }).select('name crewId depotId').lean();
+        const activeRoutes = await Route.find({ status: 'Active' }).select('routeId name depotId').lean();
 
-        const busMap = new Set(activeBuses.map(b => b.regNo));
-        const driverMap = new Set(availableDrivers.map(d => d.name));
-        const routeMap = new Set(activeRoutes.map(r => r.routeId));
+        const busLookup = new Map(activeBuses.map(b => [b.regNo, b]));
+        const driverLookup = new Map(availableDrivers.map(d => [d.name, d]));
+        const routeLookup = new Map(activeRoutes.map(r => [r.routeId, r]));
 
         const resourceErrors = [];
+        const crossDepotErrors = [];
 
         for (let idx = 0; idx < validatedEntries.length; idx++) {
             const entry = validatedEntries[idx];
             const entryNum = idx + 1;
 
-            if (!busMap.has(entry.bus)) {
-                resourceErrors.push({
+            const busRecord = busLookup.get(entry.bus);
+            const driverRecord = driverLookup.get(entry.driver);
+            const routeRecord = routeLookup.get(entry.route);
+
+            // Check resource existence
+            if (!busRecord) {
+                resourceErrors.push({ index: entryNum, type: 'INVALID_BUS', reason: `Bus "${entry.bus}" not found or not active` });
+            }
+            if (!driverRecord) {
+                resourceErrors.push({ index: entryNum, type: 'INVALID_DRIVER', reason: `Driver "${entry.driver}" not found or not on duty` });
+            }
+            if (!routeRecord) {
+                resourceErrors.push({ index: entryNum, type: 'INVALID_ROUTE', reason: `Route "${entry.route}" not found or not active` });
+            }
+
+            // Cross-depot check: all resources must belong to the specified depot
+            if (busRecord && busRecord.depotId && busRecord.depotId.toString() !== depotId.toString()) {
+                crossDepotErrors.push({
                     index: entryNum,
-                    type: 'INVALID_BUS',
-                    reason: `Bus "${entry.bus}" not found or not active`
+                    type: 'CROSS_DEPOT_BUS',
+                    reason: `Bus "${entry.bus}" belongs to a different depot`
                 });
             }
-            if (!driverMap.has(entry.driver)) {
-                resourceErrors.push({
+            if (driverRecord && driverRecord.depotId && driverRecord.depotId.toString() !== depotId.toString()) {
+                crossDepotErrors.push({
                     index: entryNum,
-                    type: 'INVALID_DRIVER',
-                    reason: `Driver "${entry.driver}" not found or not on duty`
+                    type: 'CROSS_DEPOT_DRIVER',
+                    reason: `Driver "${entry.driver}" belongs to a different depot`
                 });
             }
-            if (!routeMap.has(entry.route)) {
-                resourceErrors.push({
+            if (routeRecord && routeRecord.depotId && routeRecord.depotId.toString() !== depotId.toString()) {
+                crossDepotErrors.push({
                     index: entryNum,
-                    type: 'INVALID_ROUTE',
-                    reason: `Route "${entry.route}" not found or not active`
+                    type: 'CROSS_DEPOT_ROUTE',
+                    reason: `Route "${entry.route}" belongs to a different depot`
                 });
             }
         }
@@ -460,6 +506,18 @@ exports.applySchedule = async (req, res) => {
                 message: 'Schedule validation failed due to invalid resources.',
                 code: 'RESOURCE_VALIDATION_FAILED',
                 errors: resourceErrors,
+                processedCount: validatedEntries.length
+            });
+        }
+
+        // TASK 6: Reject cross-depot assignments
+        if (crossDepotErrors.length > 0) {
+            return res.status(400).json({
+                message: 'Cross-depot resource assignment detected. All resources must belong to the same depot.',
+                code: 'CROSS_DEPOT_ASSIGNMENT_NOT_ALLOWED',
+                errors: crossDepotErrors,
+                depotId,
+                depotName: depot.name,
                 processedCount: validatedEntries.length
             });
         }
@@ -476,6 +534,7 @@ exports.applySchedule = async (req, res) => {
                 bus: entry.bus,
                 driver: entry.driver,
                 route: entry.route,
+                depotId: depot._id,
                 status: { $ne: 'Cancelled' }
             }).lean();
 
@@ -497,23 +556,32 @@ exports.applySchedule = async (req, res) => {
         }
 
         // ═══════════════════════════════════════════════
-        // STEP 5: Save all entries to MongoDB
+        // STEP 5: Save all entries to MongoDB with depot info
         // ═══════════════════════════════════════════════
-        const scheduleDocsToSave = validatedEntries.map(entry => ({
-            day: entry.day,
-            time: entry.time,
-            route: entry.route,
-            routeName: entry.routeName || '',
-            bus: entry.bus,
-            driver: entry.driver,
-            status: 'Scheduled'
-        }));
+        const scheduleDocsToSave = validatedEntries.map(entry => {
+            const driverRecord = driverLookup.get(entry.driver);
+            return {
+                date: entry.date || new Date().toISOString().split('T')[0],
+                day: entry.day,
+                time: entry.time,
+                route: entry.route,
+                routeName: entry.routeName || '',
+                bus: entry.bus,
+                driver: entry.driver,
+                driverId: driverRecord ? driverRecord.crewId : (entry.driverId || ''),
+                depot: depot.name,
+                depotId: depot._id,
+                status: 'Scheduled'
+            };
+        });
 
         const saved = await Schedule.insertMany(scheduleDocsToSave);
 
         res.status(201).json({
-            message: `Schedule applied successfully. ${saved.length} entries saved.`,
+            message: `Schedule applied successfully for depot "${depot.name}". ${saved.length} entries saved.`,
             code: 'SCHEDULE_APPLIED',
+            depotId: depot._id,
+            depotName: depot.name,
             processedCount: validatedEntries.length,
             savedCount: saved.length,
             data: saved
@@ -555,13 +623,25 @@ const timeSlotsOverlap = (time1, time2, bufferMins = 120) => {
 
 exports.validateScheduleConflicts = async (req, res) => {
     try {
-        const { scheduleEntries } = req.body;
+        const { scheduleEntries, depotId } = req.body;
 
         if (!scheduleEntries || !Array.isArray(scheduleEntries) || scheduleEntries.length === 0) {
             return res.status(400).json({
                 message: 'Invalid request. Expected non-empty "scheduleEntries" array.',
                 code: 'INVALID_REQUEST'
             });
+        }
+
+        // Optional depot validation for depot-scoped conflict check
+        let depot = null;
+        if (depotId) {
+            depot = await Depot.findById(depotId).lean();
+            if (!depot) {
+                return res.status(404).json({
+                    message: `Depot with ID "${depotId}" not found.`,
+                    code: 'DEPOT_NOT_FOUND'
+                });
+            }
         }
 
         const conflicts = [];
@@ -697,7 +777,7 @@ exports.getMyRoute = async (req, res) => {
 
         const user = await User.findOne({ username: username })
             .lean()
-            .select('username role fullName');
+            .select('username role fullName depotId depot');
 
         if (!user) {
             return res.status(404).json({
@@ -729,7 +809,7 @@ exports.getMyRoute = async (req, res) => {
             crewMember = await Crew.findOne({
                 name: user.fullName.trim(),
                 role: 'Driver'
-            }).lean().select('crewId name role licenseNo assignedBus');
+            }).lean().select('crewId name role licenseNo assignedBus depotId depot');
         }
 
         // Strategy 2: Match username (case-insensitive)
@@ -737,7 +817,7 @@ exports.getMyRoute = async (req, res) => {
             crewMember = await Crew.findOne({
                 name: { $regex: new RegExp(`^${username}$`, 'i') },
                 role: 'Driver'
-            }).lean().select('crewId name role licenseNo assignedBus');
+            }).lean().select('crewId name role licenseNo assignedBus depotId depot');
         }
 
         // Strategy 3: Partial name match with fullName
@@ -747,7 +827,7 @@ exports.getMyRoute = async (req, res) => {
             crewMember = await Crew.findOne({
                 name: { $regex: new RegExp(`${firstName}`, 'i') },
                 role: 'Driver'
-            }).lean().select('crewId name role licenseNo assignedBus');
+            }).lean().select('crewId name role licenseNo assignedBus depotId depot');
         }
 
         // Not found after all strategies
@@ -775,11 +855,16 @@ exports.getMyRoute = async (req, res) => {
         }
 
         // ════════════════════════════════════════════════════════
-        // STEP 6: Fetch all scheduled trips for this driver
+        // STEP 6: Fetch all scheduled trips for this driver (DEPOT-SCOPED)
         // ════════════════════════════════════════════════════════
-        const mySchedules = await Schedule.find({
+        const scheduleFilter = {
             driver: crewMember.name  // Use driver name from Crew collection
-        })
+        };
+        // TASK 5: Filter by driver's depot to ensure depot isolation
+        if (crewMember.depotId) {
+            scheduleFilter.depotId = crewMember.depotId;
+        }
+        const mySchedules = await Schedule.find(scheduleFilter)
             .sort({ day: 1, time: 1 })
             .lean();
 

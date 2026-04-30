@@ -9,6 +9,8 @@ const userSchema = new mongoose.Schema({
     fullName: { type: String, default: '' },
     phone:    { type: String, default: '' },
     location: { type: String, default: '' },
+    depot:    { type: String, default: '' },
+    depotId:  { type: mongoose.Schema.Types.ObjectId, ref: 'Depot', default: null },
 }, { timestamps: true });
 
 // Hash password before save

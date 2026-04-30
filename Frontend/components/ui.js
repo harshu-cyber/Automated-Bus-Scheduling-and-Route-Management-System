@@ -20,6 +20,7 @@ const UI = {
                 { name: 'Depot Dashboard', icon: 'fas fa-warehouse', link: '../DepotManager/index.html', id: 'depot-dashboard' },
                 { name: 'Assigned Buses', icon: 'fas fa-bus', link: '../DepotManager/buses.html', id: 'depot-buses' },
                 { name: 'Schedules', icon: 'fas fa-calendar-check', link: '../DepotManager/schedules.html', id: 'depot-schedules' },
+                { name: 'Driver & Conductor', icon: 'fas fa-id-badge', link: '../DepotManager/crew.html', id: 'depot-crew' },
                 { name: 'Routes', icon: 'fas fa-route', link: '../DepotManager/routes.html', id: 'routes' },
                 { name: 'Leaves', icon: 'fas fa-calendar-minus', link: '../DepotManager/leaves.html', id: 'depot-leaves' },
                 { name: 'Profile', icon: 'fas fa-user-cog', link: '../DepotManager/profile.html', id: 'profile' }

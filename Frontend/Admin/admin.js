@@ -156,6 +156,7 @@ async function loadCrew() {
             <td>${c.role}</td>
             <td>${c.phone}</td>
             <td>${c.assignedBus}</td>
+            <td>${c.depot || '—'}</td>
             <td>${statusBadge(c.status)}</td>
             <td>
                 <button class="btn-icon" onclick="editCrew('${c._id}')"><i class="fas fa-edit"></i></button>
@@ -234,6 +235,7 @@ const editCrew = (id) => editResource('crew', id, 'crewModal', {
     'crewPhone': 'phone',
     'crewLicense': 'licenseNo',
     'crewAssignedBus': 'assignedBus',
+    'crewDepot': 'depot',
     'crewStatus': 'status'
 });
 function editSchedule(id) {

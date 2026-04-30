@@ -26,84 +26,158 @@ const seedData = async () => {
     ]);
     console.log('🗑️  Cleared existing data');
 
+    // ═══════════ DEPOTS (only 2) ═══════════
+    const depots = await Depot.create([
+        { name: 'Kashmiri Gate Depot',  location: 'Kashmiri Gate, Delhi',   totalCapacity: 50, busCount: 4, routeCount: 2, crewCount: 6, utilization: 78 },
+        { name: 'Nehru Place Depot',    location: 'Nehru Place, Delhi',     totalCapacity: 50, busCount: 4, routeCount: 2, crewCount: 6, utilization: 65 },
+    ]);
+    console.log('✅ Depots seeded (2)');
+
+    const depot1 = depots[0]; // Kashmiri Gate
+    const depot2 = depots[1]; // Nehru Place
+
     // ═══════════ USERS ═══════════
     await User.create([
         { username: 'admin',     password: 'admin123',     role: 'admin',     fullName: 'Admin User',      email: 'admin@dtcsl.gov.in',     phone: '+91 98765 43210', location: 'Delhi, India' },
-        { username: 'depot',     password: 'depot123',     role: 'depot',     fullName: 'Depot Manager',  email: 'depot@dtcsl.gov.in',     phone: '+91 98765 43211', location: 'Delhi, India' },
-        { username: 'driver',    password: 'driver123',    role: 'driver',    fullName: 'Rajesh Kumar',    email: 'driver@dtcsl.gov.in',   phone: '+91 98765 43212', location: 'Delhi, India' },
+        { username: 'depot1',    password: 'depot123',     role: 'depot',     fullName: 'KG Manager',      email: 'depot1@dtcsl.gov.in',    phone: '+91 98765 43211', location: 'Delhi, India', depot: depot1.name, depotId: depot1._id },
+        { username: 'depot2',    password: 'depot123',     role: 'depot',     fullName: 'NP Manager',      email: 'depot2@dtcsl.gov.in',    phone: '+91 98765 43220', location: 'Delhi, India', depot: depot2.name, depotId: depot2._id },
+        { username: 'driver',    password: 'driver123',    role: 'driver',    fullName: 'Rajesh Kumar',    email: 'driver@dtcsl.gov.in',    phone: '+91 98765 43212', location: 'Delhi, India', depot: depot1.name, depotId: depot1._id },
         { username: 'passenger', password: 'passenger123', role: 'passenger', fullName: 'Priya Sharma',    email: 'passenger@dtcsl.gov.in', phone: '+91 98765 43213', location: 'Delhi, India' },
     ]);
     console.log('✅ Users seeded');
 
-    // ═══════════ ROUTES ═══════════
+    // ═══════════ ROUTES (4 total — 2 per depot) ═══════════
     await Route.create([
-        { routeId: 'RT-001', name: 'Kashmiri Gate → ISBT',          startPoint: 'Kashmiri Gate',  endPoint: 'ISBT',             stops: 12, distance: 18.5, status: 'Active',      coordinates: [{ lat: 28.6669, lng: 77.2287 }, { lat: 28.6565, lng: 77.2280 }, { lat: 28.6430, lng: 77.2190 }] },
-        { routeId: 'RT-002', name: 'Sarojini Nagar → CP',           startPoint: 'Sarojini Nagar', endPoint: 'Connaught Place',   stops: 8,  distance: 12.3, status: 'Active',      coordinates: [{ lat: 28.5784, lng: 77.2042 }, { lat: 28.5965, lng: 77.2107 }, { lat: 28.6315, lng: 77.2184 }] },
-        { routeId: 'RT-003', name: 'Chandni Chowk → Lajpat Nagar',  startPoint: 'Chandni Chowk',  endPoint: 'Lajpat Nagar',     stops: 15, distance: 22.1, status: 'Active',      coordinates: [{ lat: 28.6506, lng: 77.2306 }, { lat: 28.6342, lng: 77.2310 }, { lat: 28.5710, lng: 77.2395 }] },
-        { routeId: 'RT-004', name: 'Dwarka → Noida City Centre',    startPoint: 'Dwarka Sec 21',  endPoint: 'Noida City Centre', stops: 20, distance: 35.7, status: 'Maintenance', coordinates: [] },
-        { routeId: 'RT-005', name: 'Nehru Place → Hauz Khas',       startPoint: 'Nehru Place',    endPoint: 'Hauz Khas',         stops: 6,  distance: 8.2,  status: 'Active',      coordinates: [] },
-        { routeId: 'RT-006', name: 'Rohini → Rajiv Chowk',          startPoint: 'Rohini',         endPoint: 'Rajiv Chowk',       stops: 14, distance: 19.8, status: 'Inactive',    coordinates: [] },
+        // ── Depot 1: Kashmiri Gate Depot ──
+        {
+            routeId: 'RT-001',
+            name: 'Kashmiri Gate → Chandni Chowk',
+            startPoint: 'Kashmiri Gate ISBT',
+            endPoint: 'Chandni Chowk',
+            stops: 8,
+            stopNames: [
+                'Kashmiri Gate ISBT',
+                'Kashmiri Gate Metro',
+                'Lal Quila (Red Fort)',
+                'Jama Masjid',
+                'Chawri Bazar',
+                'Nai Sarak',
+                'Town Hall',
+                'Chandni Chowk'
+            ],
+            distance: 5.2,
+            depot: depot1.name,
+            depotId: depot1._id,
+            status: 'Active',
+            coordinates: [{ lat: 28.6669, lng: 77.2287 }, { lat: 28.6562, lng: 77.2306 }]
+        },
+        {
+            routeId: 'RT-002',
+            name: 'Kashmiri Gate → Rajiv Chowk',
+            startPoint: 'Kashmiri Gate ISBT',
+            endPoint: 'Rajiv Chowk',
+            stops: 7,
+            stopNames: [
+                'Kashmiri Gate ISBT',
+                'Civil Lines',
+                'Vidhan Sabha',
+                'Pul Bangash',
+                'Sadar Bazar',
+                'New Delhi Railway Station',
+                'Rajiv Chowk'
+            ],
+            distance: 7.8,
+            depot: depot1.name,
+            depotId: depot1._id,
+            status: 'Active',
+            coordinates: [{ lat: 28.6669, lng: 77.2287 }, { lat: 28.6315, lng: 77.2184 }]
+        },
+        // ── Depot 2: Nehru Place Depot ──
+        {
+            routeId: 'RT-003',
+            name: 'Nehru Place → Hauz Khas',
+            startPoint: 'Nehru Place',
+            endPoint: 'Hauz Khas',
+            stops: 6,
+            stopNames: [
+                'Nehru Place Terminal',
+                'Kalkaji Mandir',
+                'Govindpuri',
+                'Malviya Nagar',
+                'Panchsheel Park',
+                'Hauz Khas'
+            ],
+            distance: 8.5,
+            depot: depot2.name,
+            depotId: depot2._id,
+            status: 'Active',
+            coordinates: [{ lat: 28.5491, lng: 77.2533 }, { lat: 28.5494, lng: 77.2001 }]
+        },
+        {
+            routeId: 'RT-004',
+            name: 'Nehru Place → Sarojini Nagar',
+            startPoint: 'Nehru Place',
+            endPoint: 'Sarojini Nagar',
+            stops: 7,
+            stopNames: [
+                'Nehru Place Terminal',
+                'Moolchand',
+                'Lajpat Nagar',
+                'Defence Colony',
+                'South Extension',
+                'AIIMS',
+                'Sarojini Nagar'
+            ],
+            distance: 10.3,
+            depot: depot2.name,
+            depotId: depot2._id,
+            status: 'Active',
+            coordinates: [{ lat: 28.5491, lng: 77.2533 }, { lat: 28.5784, lng: 77.2042 }]
+        }
     ]);
-    console.log('✅ Routes seeded');
+    console.log('✅ Routes seeded (4 — 2 per depot)');
 
-    // ═══════════ BUSES ═══════════
+    // ═══════════ BUSES (4 per depot = 8 total) ═══════════
     await Bus.create([
-        { regNo: 'DL-1PA-1234', type: 'AC',       capacity: 50, depot: 'Kashmiri Gate',  status: 'Active',            lastService: new Date('2026-03-15') },
-        { regNo: 'DL-1PA-5678', type: 'Non-AC',   capacity: 60, depot: 'Sarojini Nagar', status: 'Active',            lastService: new Date('2026-03-12') },
-        { regNo: 'DL-1PA-9012', type: 'Electric',  capacity: 45, depot: 'Chandni Chowk',  status: 'Under Maintenance', lastService: new Date('2026-03-10') },
-        { regNo: 'DL-1PA-3456', type: 'AC',       capacity: 50, depot: 'Dwarka',         status: 'Breakdown',         lastService: new Date('2026-03-08') },
-        { regNo: 'DL-1PA-7890', type: 'Non-AC',   capacity: 55, depot: 'Nehru Place',    status: 'Active',            lastService: new Date('2026-03-18') },
-        { regNo: 'DL-1PA-1122', type: 'Electric',  capacity: 40, depot: 'Rohini',         status: 'Active',            lastService: new Date('2026-03-20') },
-        { regNo: 'DL-1PA-3344', type: 'AC',       capacity: 50, depot: 'Kashmiri Gate',  status: 'Active',            lastService: new Date('2026-03-19') },
-        { regNo: 'DL-1PA-5566', type: 'Non-AC',   capacity: 60, depot: 'Dwarka',         status: 'Under Maintenance', lastService: new Date('2026-03-05') },
+        // Depot 1
+        { regNo: 'DL-1PA-1234', type: 'AC',       capacity: 50, depot: depot1.name, depotId: depot1._id, status: 'Active',            lastService: new Date('2026-03-15') },
+        { regNo: 'DL-1PA-3344', type: 'AC',       capacity: 50, depot: depot1.name, depotId: depot1._id, status: 'Active',            lastService: new Date('2026-03-19') },
+        { regNo: 'DL-1PA-9012', type: 'Electric', capacity: 45, depot: depot1.name, depotId: depot1._id, status: 'Under Maintenance', lastService: new Date('2026-03-10') },
+        { regNo: 'DL-1PA-1122', type: 'Non-AC',   capacity: 55, depot: depot1.name, depotId: depot1._id, status: 'Active',            lastService: new Date('2026-03-20') },
+        // Depot 2
+        { regNo: 'DL-1PA-5678', type: 'Non-AC',   capacity: 60, depot: depot2.name, depotId: depot2._id, status: 'Active',            lastService: new Date('2026-03-12') },
+        { regNo: 'DL-1PA-7890', type: 'Non-AC',   capacity: 55, depot: depot2.name, depotId: depot2._id, status: 'Active',            lastService: new Date('2026-03-18') },
+        { regNo: 'DL-1PA-3456', type: 'AC',       capacity: 50, depot: depot2.name, depotId: depot2._id, status: 'Active',            lastService: new Date('2026-03-08') },
+        { regNo: 'DL-1PA-5566', type: 'Electric', capacity: 40, depot: depot2.name, depotId: depot2._id, status: 'Under Maintenance', lastService: new Date('2026-03-05') },
     ]);
-    console.log('✅ Buses seeded');
+    console.log('✅ Buses seeded (8 — 4 per depot)');
 
     // ═══════════ CREW ═══════════
     await Crew.create([
-        { crewId: 'CR-001', name: 'Rajesh Kumar',  role: 'Driver',    licenseNo: 'DL-0420110012345', phone: '+91 98765 43210', assignedBus: 'DL-1PA-1234', status: 'On Duty' },
-        { crewId: 'CR-002', name: 'Amit Singh',    role: 'Driver',    licenseNo: 'DL-0420110054321', phone: '+91 98765 43211', assignedBus: 'DL-1PA-5678', status: 'On Duty' },
-        { crewId: 'CR-003', name: 'Suresh Yadav',  role: 'Driver',    licenseNo: 'DL-0420110067890', phone: '+91 98765 43212', assignedBus: 'DL-1PA-9012', status: 'Off Duty' },
-        { crewId: 'CR-004', name: 'Vikram Patel',  role: 'Driver',    licenseNo: 'DL-0420110011111', phone: '+91 98765 43213', assignedBus: 'DL-1PA-3456', status: 'On Leave' },
-        { crewId: 'CR-005', name: 'Mohit Sharma',  role: 'Driver',    licenseNo: 'DL-0420110022222', phone: '+91 98765 43214', assignedBus: 'DL-1PA-7890', status: 'On Duty' },
-        { crewId: 'CR-006', name: 'Priya Verma',   role: 'Conductor', phone: '+91 98765 43215', assignedBus: 'DL-1PA-1234', status: 'On Duty' },
-        { crewId: 'CR-007', name: 'Deepak Rawat',  role: 'Conductor', phone: '+91 98765 43216', assignedBus: 'DL-1PA-1122', status: 'On Duty' },
-        { crewId: 'CR-008', name: 'Anil Kumar',    role: 'Conductor', phone: '+91 98765 43217', assignedBus: 'DL-1PA-5566', status: 'Off Duty' },
-        { crewId: 'CR-009', name: 'Neha Gupta',    role: 'Driver',    licenseNo: 'DL-0420110033333', phone: '+91 98765 43218', assignedBus: '—',           status: 'Off Duty' },
-        { crewId: 'CR-010', name: 'Rahul Joshi',   role: 'Conductor', phone: '+91 98765 43219', assignedBus: 'DL-1PA-5678', status: 'On Duty' },
+        // Depot 1 — Kashmiri Gate
+        { crewId: 'CR-001', name: 'Rajesh Kumar',  role: 'Driver',    licenseNo: 'DL-0420110012345', phone: '+91 98765 43210', assignedBus: 'DL-1PA-1234', depot: depot1.name, depotId: depot1._id, status: 'On Duty' },
+        { crewId: 'CR-002', name: 'Suresh Yadav',  role: 'Driver',    licenseNo: 'DL-0420110067890', phone: '+91 98765 43212', assignedBus: 'DL-1PA-3344', depot: depot1.name, depotId: depot1._id, status: 'On Duty' },
+        { crewId: 'CR-003', name: 'Priya Verma',   role: 'Conductor', phone: '+91 98765 43215', assignedBus: 'DL-1PA-1234', depot: depot1.name, depotId: depot1._id, status: 'On Duty' },
+        // Depot 2 — Nehru Place
+        { crewId: 'CR-004', name: 'Amit Singh',    role: 'Driver',    licenseNo: 'DL-0420110054321', phone: '+91 98765 43211', assignedBus: 'DL-1PA-5678', depot: depot2.name, depotId: depot2._id, status: 'On Duty' },
+        { crewId: 'CR-005', name: 'Mohit Sharma',  role: 'Driver',    licenseNo: 'DL-0420110022222', phone: '+91 98765 43214', assignedBus: 'DL-1PA-7890', depot: depot2.name, depotId: depot2._id, status: 'On Duty' },
+        { crewId: 'CR-006', name: 'Rahul Joshi',   role: 'Conductor', phone: '+91 98765 43219', assignedBus: 'DL-1PA-5678', depot: depot2.name, depotId: depot2._id, status: 'On Duty' },
     ]);
-    console.log('✅ Crew seeded');
-
-    // ═══════════ DEPOTS ═══════════
-    await Depot.create([
-        { name: 'Kashmiri Gate Depot',  location: 'Kashmiri Gate, Delhi',  totalCapacity: 41, busCount: 32, routeCount: 18, crewCount: 64, utilization: 78 },
-        { name: 'Dwarka Depot',         location: 'Dwarka Sec 21, Delhi', totalCapacity: 45, busCount: 28, routeCount: 14, crewCount: 56, utilization: 62 },
-        { name: 'Rohini Depot',         location: 'Rohini Sec 5, Delhi',  totalCapacity: 44, busCount: 24, routeCount: 10, crewCount: 48, utilization: 55 },
-        { name: 'Nehru Place Depot',    location: 'Nehru Place, Delhi',   totalCapacity: 44, busCount: 20, routeCount: 8,  crewCount: 40, utilization: 45 },
-        { name: 'Sarojini Nagar Depot', location: 'Sarojini Nagar, Delhi',totalCapacity: 41, busCount: 38, routeCount: 17, crewCount: 76, utilization: 92 },
-    ]);
-    console.log('✅ Depots seeded');
+    console.log('✅ Crew seeded (6 — 3 per depot)');
 
     // ═══════════ SCHEDULE ═══════════
-    const today = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayName = dayNames[new Date().getDay()];
     await Schedule.create([
-        { date: today, day: 'Monday',    time: '06:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
-        { date: today, day: 'Monday',    time: '07:30', route: 'RT-002', routeName: 'Sarojini Nagar', bus: 'DL-1PA-5678', driver: 'Amit Singh' },
-        { date: today, day: 'Monday',    time: '09:00', route: 'RT-003', routeName: 'Chandni Chowk',  bus: 'DL-1PA-9012', driver: 'Suresh Yadav' },
-        { date: today, day: 'Tuesday',   time: '06:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-3344', driver: 'Vikram Patel' },
-        { date: today, day: 'Tuesday',   time: '07:30', route: 'RT-005', routeName: 'Nehru Place',    bus: 'DL-1PA-7890', driver: 'Mohit Sharma' },
-        { date: today, day: 'Tuesday',   time: '10:30', route: 'RT-004', routeName: 'Dwarka',         bus: 'DL-1PA-5566', driver: 'Anil Kumar' },
-        { date: today, day: 'Wednesday', time: '06:00', route: 'RT-002', routeName: 'Sarojini Nagar', bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
-        { date: today, day: 'Wednesday', time: '07:30', route: 'RT-006', routeName: 'Rohini',         bus: 'DL-1PA-1122', driver: 'Deepak Rawat' },
-        { date: today, day: 'Wednesday', time: '09:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-5678', driver: 'Amit Singh' },
-        { date: today, day: 'Thursday',  time: '06:00', route: 'RT-003', routeName: 'Chandni Chowk',  bus: 'DL-1PA-3456', driver: 'Vikram Patel' },
-        { date: today, day: 'Thursday',  time: '09:00', route: 'RT-005', routeName: 'Nehru Place',    bus: 'DL-1PA-7890', driver: 'Mohit Sharma' },
-        { date: today, day: 'Friday',    time: '06:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
-        { date: today, day: 'Friday',    time: '07:30', route: 'RT-004', routeName: 'Dwarka',         bus: 'DL-1PA-5566', driver: 'Anil Kumar' },
-        { date: today, day: 'Saturday',  time: '06:00', route: 'RT-002', routeName: 'Sarojini Nagar', bus: 'DL-1PA-5678', driver: 'Amit Singh' },
-        { date: today, day: 'Sunday',    time: '08:00', route: 'RT-001', routeName: 'Kashmiri Gate',  bus: 'DL-1PA-1234', driver: 'Rajesh Kumar' },
+        // Depot 1
+        { date: today, day: dayName, time: '06:00', route: 'RT-001', routeName: 'Kashmiri Gate → Chandni Chowk',  bus: 'DL-1PA-1234', driver: 'Rajesh Kumar', driverId: 'CR-001', depot: depot1.name, depotId: depot1._id },
+        { date: today, day: dayName, time: '08:00', route: 'RT-002', routeName: 'Kashmiri Gate → Rajiv Chowk',    bus: 'DL-1PA-3344', driver: 'Suresh Yadav', driverId: 'CR-002', depot: depot1.name, depotId: depot1._id },
+        // Depot 2
+        { date: today, day: dayName, time: '07:00', route: 'RT-003', routeName: 'Nehru Place → Hauz Khas',        bus: 'DL-1PA-5678', driver: 'Amit Singh',   driverId: 'CR-004', depot: depot2.name, depotId: depot2._id },
+        { date: today, day: dayName, time: '09:00', route: 'RT-004', routeName: 'Nehru Place → Sarojini Nagar',   bus: 'DL-1PA-7890', driver: 'Mohit Sharma', driverId: 'CR-005', depot: depot2.name, depotId: depot2._id },
     ]);
-    console.log('✅ Schedule seeded');
+    console.log('✅ Schedule seeded (4 entries)');
 
     console.log('\n🎉 Database seeded successfully!');
     process.exit(0);

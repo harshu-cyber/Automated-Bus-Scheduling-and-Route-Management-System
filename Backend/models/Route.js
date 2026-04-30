@@ -6,7 +6,10 @@ const routeSchema = new mongoose.Schema({
     startPoint:{ type: String, default: '' },
     endPoint:  { type: String, default: '' },
     stops:     { type: Number, default: 0 },
-    distance:  { type: Number, default: 0 },  // in km
+    stopNames: [{ type: String }],              // ordered list of stop names
+    distance:  { type: Number, default: 0 },    // in km
+    depot:     { type: String, default: '' },
+    depotId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Depot', default: null },
     status:    { type: String, enum: ['Active', 'Inactive', 'Maintenance'], default: 'Active' },
     coordinates: [{ lat: Number, lng: Number }],
 }, { timestamps: true });

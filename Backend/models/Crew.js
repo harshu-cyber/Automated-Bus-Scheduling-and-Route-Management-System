@@ -8,6 +8,7 @@ const crewSchema = new mongoose.Schema({
     phone:     { type: String, default: '' },
     assignedBus: { type: String, default: '—' },    // bus regNo
     depot:     { type: String, default: '—' },
+    depotId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Depot', default: null },
     status:    { type: String, enum: ['On Duty', 'Off Duty', 'On Leave'], default: 'Off Duty' },
 }, { timestamps: true });
 

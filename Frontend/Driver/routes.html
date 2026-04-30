@@ -7,52 +7,33 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../Admin/admin.css">
+    <link rel="stylesheet" href="../components/route-cards.css">
 </head>
 <body data-page="routes">
 
     <main class="main-content">
         <section class="page active">
             <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-                <h2 style="color:var(--text-main)">Route Management</h2>
-                
+                <h2 style="color:var(--text-main)">My Routes</h2>
+                <span style="font-size:13px; color:#94a3b8;"><i class="fas fa-info-circle" style="margin-right:6px;"></i>Click any route to view stoppages</span>
             </div>
 
-            <div class="table-card">
-                <div class="table-header"><h3>All Active Routes</h3></div>
-                <table class="data-table">
-                    <thead>
-                        <tr><th>ID</th><th>Route Name</th><th>Stops</th><th>Distance</th><th>Status</th></tr>
-                    </thead>
-                    <tbody id="routesBody">
-                        <!-- Dynamic content from admin.js -->
-                    </tbody>
-                </table>
+            <div id="routeCardsContainer" class="route-cards-grid">
+                <div style="text-align:center; padding:40px; color:#64748b;">Loading routes...</div>
             </div>
         </section>
     </main>
 
-
-
     <script src="../components/ui.js"></script>
     <script src="../components/api.js"></script>
-    
-    
-<script>
-    document.addEventListener('DOMContentLoaded', async () => {
-        const data = await API.getRoutes();
-        const tbody = document.getElementById('routesBody');
-        if (tbody && data) {
-            tbody.innerHTML = data.map(r => `
-                <tr>
-                    <td><strong>${r.routeId}</strong></td>
-                    <td>${r.name}</td>
-                    <td>${r.stops}</td>
-                    <td>${r.distance} km</td>
-                    <td><span class="badge ${r.status === 'Active' ? 'badge-green' : 'badge-yellow'}">${r.status}</span></td>
-                </tr>
-            `).join('');
-        }
-    });
-</script>
+    <script src="../components/route-cards.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const data = await API.getRoutes();
+            if (data) {
+                RouteCards.render('routeCardsContainer', data, { editable: false });
+            }
+        });
+    </script>
 </body>
 </html>

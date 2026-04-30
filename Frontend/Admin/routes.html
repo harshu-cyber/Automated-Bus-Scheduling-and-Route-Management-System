@@ -7,6 +7,33 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="../components/route-cards.css">
+    <style>
+        /* ═══ Dynamic Stoppages Form ═══ */
+        .stops-form-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 260px; overflow-y: auto; padding-right: 4px; }
+        .stop-input-row { display: flex; align-items: center; gap: 8px; }
+        .stop-input-row input { flex: 1; }
+        .stop-num { font-size: 11px; font-weight: 700; color: #9FE870; min-width: 24px; text-align: center; }
+        .stop-remove-btn {
+            width: 28px; height: 28px; border: none; border-radius: 6px;
+            background: #ef444420; color: #ef4444; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 12px;
+            transition: background 0.2s; flex-shrink: 0;
+        }
+        .stop-remove-btn:hover { background: #ef444440; }
+        .stop-add-btn {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            width: 100%; padding: 10px; border-radius: 8px;
+            border: 1.5px dashed #9FE87040; background: transparent; color: #9FE870;
+            font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 13px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .stop-add-btn:hover { border-color: #9FE870; background: #9FE87010; }
+        .auto-field { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: #0f131a; border: 1px solid var(--border-color, #2a2f3e); }
+        .auto-field-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .auto-field-value { font-size: 15px; font-weight: 700; color: #9FE870; }
+        .auto-field-icon { color: #38bdf8; font-size: 14px; margin-right: 4px; }
+    </style>
 </head>
 <body data-page="routes">
 
@@ -14,93 +41,229 @@
         <section class="page active">
             <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
                 <h2 style="color:var(--text-main)">Route Management</h2>
-                <button class="btn-primary" onclick="openModal('routeModal')" style="background:#9FE870; color:#111; border:none; padding:12px 20px; border-radius:10px; font-weight:700; cursor:pointer;">
+                <button class="btn-primary" onclick="openAddRouteModal()" style="background:#9FE870; color:#111; border:none; padding:12px 20px; border-radius:10px; font-weight:700; cursor:pointer;">
                     <i class="fas fa-plus"></i> Add New Route
                 </button>
             </div>
-
-            <div class="table-card">
-                <div class="table-header"><h3>All Active Routes</h3></div>
-                <table class="data-table">
-                    <thead>
-                        <tr><th>ID</th><th>Route Name</th><th>Stops</th><th>Distance</th><th>Status</th><th>Actions</th></tr>
-                    </thead>
-                    <tbody id="routesBody">
-                        <!-- Dynamic content from admin.js -->
-                    </tbody>
-                </table>
+            <div id="routeCardsContainer" class="route-cards-grid">
+                <div style="text-align:center; padding:40px; color:#64748b;">Loading routes...</div>
             </div>
         </section>
     </main>
 
-    <!-- Modal -->
+    <!-- Add/Edit Route Modal -->
     <div class="modal-overlay" id="routeModal">
-        <div class="modal">
+        <div class="modal" style="max-width:520px;">
             <div class="modal-header">
-                <h3 id="modalTitle">Route Details</h3>
+                <h3 id="routeModalTitle">Add New Route</h3>
                 <button class="modal-close" onclick="closeModal('routeModal')"><i class="fas fa-times"></i></button>
             </div>
-            <form class="modal-body" id="routeForm">
+            <div class="modal-body">
+                <!-- Auto-generated Route ID -->
                 <div class="form-group">
                     <label>Route ID</label>
-                    <input type="text" class="form-input" id="routeId" name="routeId" placeholder="e.g. RT-101" required>
+                    <div class="auto-field">
+                        <span class="auto-field-icon"><i class="fas fa-hashtag"></i></span>
+                        <div>
+                            <div class="auto-field-label">Auto-Generated</div>
+                            <div class="auto-field-value" id="autoRouteId">RT-XXX</div>
+                        </div>
+                    </div>
                 </div>
+
                 <div class="form-group">
                     <label>Route Name</label>
-                    <input type="text" class="form-input" id="routeName" name="name" placeholder="e.g. Kashmiri Gate → ISBT" required>
+                    <input type="text" class="form-input" id="routeName" placeholder="e.g. Kashmiri Gate → Chandni Chowk" required>
                 </div>
-                <div class="form-row" style="display:flex; gap:15px;">
-                    <div class="form-group" style="flex:1">
-                        <label>Stops</label>
-                        <input type="number" class="form-input" id="routeStops" name="stops" placeholder="0">
+
+                <!-- Dynamic Stoppages -->
+                <div class="form-group">
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Stoppages <small style="color:#64748b;">(in order)</small></span>
+                        <span id="stopCount" style="font-size:12px; color:#9FE870; font-weight:600;">0 stops</span>
+                    </label>
+                    <div class="stops-form-list" id="stopsFormList">
+                        <!-- Dynamic stop inputs -->
                     </div>
-                    <div class="form-group" style="flex:1">
-                        <label>Distance (km)</label>
-                        <input type="number" step="0.1" class="form-input" id="routeDistance" name="distance" placeholder="0.0">
+                    <button type="button" class="stop-add-btn" onclick="addStopInput()">
+                        <i class="fas fa-plus"></i> Add Stoppage
+                    </button>
+                </div>
+
+                <!-- Auto-calculated Distance -->
+                <div class="form-group">
+                    <label>Estimated Distance</label>
+                    <div class="auto-field">
+                        <span class="auto-field-icon"><i class="fas fa-road"></i></span>
+                        <div>
+                            <div class="auto-field-label">Auto-Calculated</div>
+                            <div class="auto-field-value" id="autoDistance">0 km</div>
+                        </div>
                     </div>
                 </div>
+
                 <div class="form-group">
                     <label>Status</label>
-                    <select class="form-input" id="routeStatus" name="status">
+                    <select class="form-input" id="routeStatus">
                         <option value="Active">Active</option>
                         <option value="Inactive">Inactive</option>
                         <option value="Maintenance">Maintenance</option>
                     </select>
                 </div>
+
                 <div class="modal-footer" style="margin-top:20px; text-align:right;">
-                    <button type="button" class="btn-secondary" onclick="closeModal('routeModal')" style="padding:10px 20px; border-radius:8px; border:1px solid var(--border-color); background:transparent; color:var(--text-main); margin-right:10px; cursor:pointer;">Cancel</button>
-                    <button type="submit" class="btn-primary" style="padding:10px 20px; border-radius:8px; border:none; background:#9FE870; color:#111; font-weight:700; cursor:pointer;">Save Route</button>
+                    <button type="button" onclick="closeModal('routeModal')" style="padding:10px 20px; border-radius:8px; border:1px solid var(--border-color); background:transparent; color:var(--text-main); margin-right:10px; cursor:pointer;">Cancel</button>
+                    <button type="button" onclick="submitRoute()" style="padding:10px 20px; border-radius:8px; border:none; background:#9FE870; color:#111; font-weight:700; cursor:pointer;">Save Route</button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
     <script src="../components/ui.js"></script>
     <script src="../components/api.js"></script>
+    <script src="../components/route-cards.js"></script>
     <script src="admin.js"></script>
     <script>
-        // Specific Form Handler for Routes
-        document.getElementById('routeForm').onsubmit = async (e) => {
-            e.preventDefault();
+        // ═══════════ ROUTE MANAGEMENT LOGIC ═══════════
+
+        // Override loadRoutes to use shared RouteCards
+        async function loadRoutes() {
+            const data = await API.getRoutes();
+            if (data) RouteCards.render('routeCardsContainer', data, { editable: true });
+        }
+
+        // ═══════ Open modal for adding ═══════
+        function openAddRouteModal() {
+            document.getElementById('routeModalTitle').textContent = 'Add New Route';
+            document.getElementById('routeName').value = '';
+            document.getElementById('routeStatus').value = 'Active';
+            document.getElementById('stopsFormList').innerHTML = '';
+            document.getElementById('autoRouteId').textContent = 'Auto-Generated';
+            document.getElementById('autoDistance').textContent = '0 km';
+            document.getElementById('stopCount').textContent = '0 stops';
+            delete document.getElementById('routeModal').dataset.editId;
+            // Start with 2 empty stop inputs
+            addStopInput('');
+            addStopInput('');
+            openModal('routeModal');
+        }
+
+        // ═══════ Dynamic stop inputs ═══════
+        function addStopInput(value = '') {
+            const list = document.getElementById('stopsFormList');
+            const idx = list.children.length + 1;
+            const row = document.createElement('div');
+            row.className = 'stop-input-row';
+            row.innerHTML = `
+                <span class="stop-num">${String(idx).padStart(2, '0')}</span>
+                <input type="text" class="form-input stop-name-input" placeholder="Enter stop name" value="${value}" oninput="recalcRoute()">
+                <button type="button" class="stop-remove-btn" onclick="removeStopInput(this)" title="Remove"><i class="fas fa-times"></i></button>
+            `;
+            list.appendChild(row);
+            recalcRoute();
+            // Focus the new input
+            row.querySelector('input').focus();
+        }
+
+        function removeStopInput(btn) {
+            const list = document.getElementById('stopsFormList');
+            if (list.children.length <= 2) {
+                UI.showAlert('A route needs at least 2 stops (start & end)', 'error');
+                return;
+            }
+            btn.closest('.stop-input-row').remove();
+            // Re-number
+            Array.from(list.children).forEach((row, i) => {
+                row.querySelector('.stop-num').textContent = String(i + 1).padStart(2, '0');
+            });
+            recalcRoute();
+        }
+
+        function recalcRoute() {
+            const inputs = document.querySelectorAll('#stopsFormList .stop-name-input');
+            const stops = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
+            document.getElementById('stopCount').textContent = `${stops.length} stops`;
+            // ~1.5 km per stop pair
+            const dist = stops.length >= 2 ? ((stops.length - 1) * 1.5).toFixed(1) : '0';
+            document.getElementById('autoDistance').textContent = `${dist} km`;
+            // Auto-generate name from first and last stop
+            if (stops.length >= 2) {
+                const nameInput = document.getElementById('routeName');
+                if (!nameInput.dataset.manual) {
+                    nameInput.value = `${stops[0]} → ${stops[stops.length - 1]}`;
+                }
+            }
+        }
+
+        // Track if user manually edited the name
+        document.getElementById('routeName').addEventListener('input', function() {
+            this.dataset.manual = 'true';
+        });
+
+        // ═══════ Submit route ═══════
+        async function submitRoute() {
             const modal = document.getElementById('routeModal');
-            const id = modal.dataset.editId;
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
+            const editId = modal.dataset.editId;
+
+            const inputs = document.querySelectorAll('#stopsFormList .stop-name-input');
+            const stopNames = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
+
+            if (stopNames.length < 2) {
+                UI.showAlert('Please add at least 2 stoppages (start & end)', 'error');
+                return;
+            }
+
+            const name = document.getElementById('routeName').value.trim();
+            if (!name) {
+                UI.showAlert('Route name is required', 'error');
+                return;
+            }
+
+            const data = {
+                name,
+                stopNames,
+                status: document.getElementById('routeStatus').value,
+                startPoint: stopNames[0],
+                endPoint: stopNames[stopNames.length - 1],
+                stops: stopNames.length,
+                distance: parseFloat(((stopNames.length - 1) * 1.5).toFixed(1))
+            };
 
             let res;
-            if (id) {
-                res = await API.updateRes('routes', id, data);
+            if (editId) {
+                res = await API.updateRes('routes', editId, data);
             } else {
                 res = await API.fetch('/routes', { method: 'POST', body: JSON.stringify(data) });
             }
 
             if (res) {
-                UI.showAlert('Route saved successfully!');
+                UI.showAlert(editId ? 'Route updated!' : `Route ${res.routeId} created!`);
                 closeModal('routeModal');
                 loadRoutes();
             }
-        };
-        // Override the target tbody to match admin.js or update admin.js
+        }
+
+        // ═══════ Edit route (populate modal with existing data) ═══════
+        async function editRoute(id) {
+            const item = await API.fetch(`/routes/${id}`);
+            if (!item) return;
+            document.getElementById('routeModalTitle').textContent = 'Edit Route';
+            document.getElementById('routeName').value = item.name || '';
+            document.getElementById('routeName').dataset.manual = 'true';
+            document.getElementById('routeStatus').value = item.status || 'Active';
+            document.getElementById('autoRouteId').textContent = item.routeId;
+            const list = document.getElementById('stopsFormList');
+            list.innerHTML = '';
+            if (item.stopNames && item.stopNames.length) {
+                item.stopNames.forEach(s => addStopInput(s));
+            } else {
+                addStopInput(item.startPoint || '');
+                addStopInput(item.endPoint || '');
+            }
+            document.getElementById('routeModal').dataset.editId = id;
+            recalcRoute();
+            openModal('routeModal');
+        }
     </script>
 </body>
 </html>

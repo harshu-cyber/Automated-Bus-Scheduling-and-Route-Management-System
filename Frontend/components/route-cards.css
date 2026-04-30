@@ -1,0 +1,218 @@
+/* ═══════════════════════════════════════════════════
+   SHARED ROUTE CARDS & STOPPAGES STYLES
+   Used by: Admin, Driver, Depot Manager, Passenger
+═══════════════════════════════════════════════════ */
+
+/* ═══════ Route Cards Grid ═══════ */
+.route-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.route-card {
+    background: var(--card-bg, #1a1f2e);
+    border: 1px solid var(--border-color, #2a2f3e);
+    border-radius: 16px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+.route-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    background: linear-gradient(180deg, #9FE870, #38bdf8);
+    border-radius: 4px 0 0 4px;
+}
+.route-card:hover {
+    transform: translateY(-4px);
+    border-color: #9FE87060;
+    box-shadow: 0 8px 32px rgba(159, 232, 112, 0.08);
+}
+.route-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+.route-card-id {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9FE870;
+    background: #9FE87015;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+.route-card-depot {
+    font-size: 11px;
+    color: #94a3b8;
+    background: #94a3b815;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+.route-card-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-main, #f1f5f9);
+    margin-bottom: 14px;
+    line-height: 1.3;
+}
+.route-card-endpoints {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.route-endpoint {
+    flex: 1;
+    background: #0f131a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    text-align: center;
+}
+.route-endpoint-label {
+    font-size: 10px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+.route-endpoint-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+.route-endpoint-arrow {
+    color: #9FE870;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.route-card-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+.route-card-meta span i {
+    margin-right: 5px;
+    opacity: 0.6;
+}
+.route-card-hint {
+    font-size: 11px;
+    color: #475569;
+    margin-top: 12px;
+    text-align: center;
+    font-style: italic;
+}
+.route-card-actions {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.route-card:hover .route-card-actions { opacity: 1; }
+.route-card-actions button {
+    width: 28px; height: 28px;
+    border: none; border-radius: 6px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+.route-card-actions .btn-edit {
+    background: #38bdf820; color: #38bdf8;
+}
+.route-card-actions .btn-edit:hover { background: #38bdf840; }
+.route-card-actions .btn-del {
+    background: #ef444420; color: #ef4444;
+}
+.route-card-actions .btn-del:hover { background: #ef444440; }
+
+/* ═══════ Stoppages Modal ═══════ */
+.stops-modal-content {
+    max-width: 480px;
+    width: 90%;
+}
+.stops-route-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 6px;
+}
+.stops-route-meta {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 24px;
+}
+.stops-route-meta span { margin-right: 16px; }
+.stops-timeline {
+    position: relative;
+    padding-left: 32px;
+}
+.stops-timeline::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: linear-gradient(180deg, #9FE870, #38bdf8);
+    border-radius: 2px;
+}
+.stop-item {
+    position: relative;
+    padding: 10px 0 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.stop-dot {
+    position: absolute;
+    left: -27px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #1a1f2e;
+    border: 2px solid #9FE870;
+    z-index: 1;
+}
+.stop-item:first-child .stop-dot {
+    background: #9FE870;
+    width: 14px; height: 14px;
+    left: -28px;
+    border: none;
+}
+.stop-item:last-child .stop-dot {
+    background: #38bdf8;
+    border-color: #38bdf8;
+    width: 14px; height: 14px;
+    left: -28px;
+    border: none;
+}
+.stop-number {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    min-width: 20px;
+}
+.stop-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #e2e8f0;
+}
+.stop-item:first-child .stop-name,
+.stop-item:last-child .stop-name {
+    font-weight: 700;
+    color: #f1f5f9;
+}
+.stop-item:first-child .stop-number { color: #9FE870; }
+.stop-item:last-child .stop-number { color: #38bdf8; }

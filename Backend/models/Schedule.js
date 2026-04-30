@@ -8,6 +8,9 @@ const scheduleSchema = new mongoose.Schema({
     routeName: { type: String, default: '' },
     bus:     { type: String, default: '' },          // bus regNo
     driver:  { type: String, default: '' },          // driver name
+    driverId: { type: String, default: '' },         // crew crewId for lookup
+    depot:   { type: String, default: '' },          // depot name (string for display)
+    depotId: { type: mongoose.Schema.Types.ObjectId, ref: 'Depot', default: null },
     status:  { type: String, enum: ['Scheduled', 'In-Progress', 'Completed', 'Cancelled'], default: 'Scheduled' },
 }, { timestamps: true });
 

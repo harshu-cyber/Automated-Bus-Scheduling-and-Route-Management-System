@@ -21,7 +21,29 @@ exports.getRouteById = async (req, res) => {
 
 exports.createRoute = async (req, res) => {
     try {
-        const route = await Route.create(req.body);
+        const data = { ...req.body };
+
+        // Auto-generate routeId: find the highest existing RT-XXX and increment
+        const lastRoute = await Route.findOne({}).sort({ routeId: -1 }).lean();
+        let nextNum = 1;
+        if (lastRoute && lastRoute.routeId) {
+            const match = lastRoute.routeId.match(/RT-(\d+)/);
+            if (match) nextNum = parseInt(match[1]) + 1;
+        }
+        data.routeId = `RT-${String(nextNum).padStart(3, '0')}`;
+
+        // Derive fields from stopNames if provided
+        if (data.stopNames && Array.isArray(data.stopNames) && data.stopNames.length >= 2) {
+            data.startPoint = data.stopNames[0];
+            data.endPoint = data.stopNames[data.stopNames.length - 1];
+            data.stops = data.stopNames.length;
+            // Auto-calculate distance: ~1.5 km avg between consecutive stops
+            if (!data.distance || data.distance <= 0) {
+                data.distance = parseFloat(((data.stopNames.length - 1) * 1.5).toFixed(1));
+            }
+        }
+
+        const route = await Route.create(data);
         res.status(201).json(route);
     } catch (err) {
         res.status(400).json({ message: 'Invalid data', error: err.message });

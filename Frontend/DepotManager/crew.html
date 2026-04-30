@@ -50,7 +50,6 @@
                         <select class="form-input" id="crewRole" name="role">
                             <option value="Driver">Driver</option>
                             <option value="Conductor">Conductor</option>
-                            <option value="Depot Manager">Depot Manager</option>
                         </select>
                     </div>
                     <div class="form-group" style="flex:1">
@@ -114,6 +113,19 @@
                 loadCrew();
             }
         };
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+            if (user.location) {
+                const depotInput = document.getElementById('crewDepot');
+                if (depotInput) {
+                    depotInput.value = user.location;
+                    depotInput.readOnly = true;
+                    depotInput.style.backgroundColor = 'var(--surface-light)';
+                }
+            }
+        });
     </script>
 </body>
 </html>

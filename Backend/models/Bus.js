@@ -5,6 +5,7 @@ const busSchema = new mongoose.Schema({
     type:        { type: String, enum: ['AC', 'Non-AC', 'Electric'], default: 'AC' },
     capacity:    { type: Number, default: 50 },
     depot:       { type: String, default: '' },
+    depotId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Depot', default: null },
     status:      { type: String, enum: ['Active', 'Under Maintenance', 'Retired', 'Breakdown'], default: 'Active' },
     lastService: { type: Date, default: Date.now },
 }, { timestamps: true });

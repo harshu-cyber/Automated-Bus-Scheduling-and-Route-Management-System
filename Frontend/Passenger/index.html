@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="../Admin/admin.css">
+    <link rel="stylesheet" href="../components/route-cards.css">
     <style>
         .passenger-main { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; }
         #liveMap { height: 500px; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); }
@@ -110,6 +111,17 @@
 
                 <div id="liveMap"></div>
             </div>
+
+            <!-- Browse All Routes Section -->
+            <div style="margin-top:40px;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                    <h3 style="color:var(--text-main, #f1f5f9); font-size:20px; font-weight:700; margin:0;"><i class="fas fa-route" style="color:#9FE870; margin-right:8px;"></i>Browse All Routes</h3>
+                    <span style="font-size:12px; color:#64748b;">Click any route to view stoppages</span>
+                </div>
+                <div id="passengerRoutesContainer" class="route-cards-grid">
+                    <div style="text-align:center; padding:40px; color:#64748b;">Loading routes...</div>
+                </div>
+            </div>
         </section>
     </main>
 
@@ -144,11 +156,18 @@
     <script src="../components/ui.js"></script>
     <script src="../components/api.js"></script>
     <script src="../components/socket_client.js"></script>
+    <script src="../components/route-cards.js"></script>
     <script>
         let map, markers = {};
 
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
+            
+            // Load route cards
+            (async () => {
+                const routes = await API.getRoutes();
+                if (routes) RouteCards.render('passengerRoutesContainer', routes, { editable: false });
+            })();
             
             // Listen for live location updates
             SocketClient.onLocationUpdate((data) => {
