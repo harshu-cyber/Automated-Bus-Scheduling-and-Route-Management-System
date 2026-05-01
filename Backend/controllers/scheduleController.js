@@ -13,6 +13,7 @@ exports.getAllSchedules = async (req, res) => {
         const filter = {};
         if (req.query.day) filter.day = req.query.day; // query params
         if (req.query.depotId) filter.depotId = req.query.depotId; // depot-scoped filter
+        if (req.query.depot) filter.depot = req.query.depot; // depot name filter
         const entries = await Schedule.find(filter).sort({ day: 1, time: 1 });
         res.json(entries);
     } catch (err) {

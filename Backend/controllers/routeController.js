@@ -2,7 +2,10 @@ const Route = require('../models/Route');
 
 exports.getAllRoutes = async (req, res) => {
     try {
-        const routes = await Route.find({}).sort({ routeId: 1 });
+        const filter = {};
+        if (req.query.depot) filter.depot = req.query.depot;
+        if (req.query.depotId) filter.depotId = req.query.depotId;
+        const routes = await Route.find(filter).sort({ routeId: 1 });
         res.json(routes);
     } catch (err) {
         res.status(500).json({ message: 'Server error', error: err.message });

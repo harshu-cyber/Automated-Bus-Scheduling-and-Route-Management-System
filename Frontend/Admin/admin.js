@@ -60,7 +60,9 @@ async function loadDashboard() {
 
 // ═══════════ ROUTES ═══════════
 async function loadRoutes() {
-    const data = await API.getRoutes();
+    const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+    const params = (user.role === 'depot' && user.location) ? { depot: user.location } : undefined;
+    const data = await API.getRoutes(params);
     if (!data) return;
     const tbody = document.querySelector('.data-table tbody');
     tbody.innerHTML = data.map(r => `
@@ -80,7 +82,9 @@ async function loadRoutes() {
 
 // ═══════════ BUSES ═══════════
 async function loadBuses() {
-    const data = await API.getBuses();
+    const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+    const params = (user.role === 'depot' && user.location) ? { depot: user.location } : undefined;
+    const data = await API.getBuses(params);
     if (!data) return;
     const tbody = document.querySelector('.data-table tbody');
     tbody.innerHTML = data.map(b => `
@@ -102,7 +106,9 @@ async function loadBuses() {
 // ═══════════ SCHEDULE ═══════════
 let globalScheduleData = [];
 async function loadSchedule() {
-    const data = await API.getSchedule();
+    const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+    const params = (user.role === 'depot' && user.location) ? { depot: user.location } : undefined;
+    const data = await API.getSchedule(params);
     if (!data) return;
     globalScheduleData = data;
     const grid = document.querySelector('.schedule-grid');
@@ -146,7 +152,9 @@ async function loadSchedule() {
 
 // ═══════════ CREW ═══════════
 async function loadCrew() {
-    const data = await API.getCrew();
+    const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+    const params = (user.role === 'depot' && user.location) ? { depot: user.location } : undefined;
+    const data = await API.getCrew(params);
     if (!data) return;
     const tbody = document.querySelector('.data-table tbody');
     tbody.innerHTML = data.map(c => `

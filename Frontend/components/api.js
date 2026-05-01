@@ -2,7 +2,7 @@
 //  DTCSL SHARED API CLIENT
 // ═══════════════════════════════════════════════════
 
-const API_SERVER = 'http://127.0.0.1:5005/api';
+const API_SERVER = 'http://127.0.0.1:5000/api';
 
 const API = {
     // 1. Fetch Helper
@@ -43,10 +43,16 @@ const API = {
     register: (data) => API.fetch('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
 
     // 3. Resource Actions
-    getBuses: (params) => API.fetch(`/buses?${new URLSearchParams(params).toString()}`),
-    getRoutes: () => API.fetch('/routes'),
-    getSchedule: (day) => API.fetch(`/schedule${day ? `?day=${day}` : ''}`),
-    getCrew: (role) => API.fetch(`/crew${role ? `?role=${role}` : ''}`),
+    getBuses: (params) => API.fetch(`/buses${params ? `?${new URLSearchParams(params).toString()}` : ''}`),
+    getRoutes: (params) => API.fetch(`/routes${params ? `?${new URLSearchParams(params).toString()}` : ''}`),
+    getSchedule: (params) => {
+        if (typeof params === 'string') return API.fetch(`/schedule?day=${params}`);
+        return API.fetch(`/schedule${params ? `?${new URLSearchParams(params).toString()}` : ''}`);
+    },
+    getCrew: (params) => {
+        if (typeof params === 'string') return API.fetch(`/crew?role=${params}`);
+        return API.fetch(`/crew${params ? `?${new URLSearchParams(params).toString()}` : ''}`);
+    },
     getDepots: () => API.fetch('/depots'),
     getDashboard: () => API.fetch('/dashboard'),
 

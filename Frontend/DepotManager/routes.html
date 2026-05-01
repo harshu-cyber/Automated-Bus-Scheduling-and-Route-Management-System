@@ -114,7 +114,8 @@
     <script src="../Admin/admin.js"></script>
     <script>
         async function loadRoutes() {
-            const data = await API.getRoutes();
+            const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+            const data = await API.getRoutes(user.location ? { depot: user.location } : undefined);
             if (data) RouteCards.render('routeCardsContainer', data, { editable: true });
         }
         document.addEventListener('DOMContentLoaded', () => loadRoutes());

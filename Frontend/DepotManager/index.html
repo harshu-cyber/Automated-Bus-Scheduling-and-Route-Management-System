@@ -59,8 +59,8 @@
             
             // 1. Fetch data
             const buses = await API.getBuses({ depot: depotName });
-            const schedules = await API.getSchedule();
-            const drivers = await API.getCrew('Driver');
+            const schedules = await API.getSchedule({ depot: depotName });
+            const drivers = await API.getCrew({ role: 'Driver', depot: depotName });
 
             // 2. Update Stats
             document.getElementById('busCount').innerText = buses?.length || 0;

@@ -105,7 +105,8 @@
         let globalScheduleData = [];
 
         async function loadSchedule() {
-            const data = await API.getSchedule();
+            const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+            const data = await API.getSchedule(user.location ? { depot: user.location } : undefined);
             globalScheduleData = data || [];
             const grid = document.querySelector('.schedule-grid');
             

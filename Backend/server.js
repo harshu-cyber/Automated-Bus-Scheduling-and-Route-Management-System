@@ -15,7 +15,7 @@ const io = new Server(server, {
     }
 });
 
-const PORT = process.env.PORT || 5005;
+const PORT = process.env.PORT || 5000;
 
 // ═══════════ MIDDLEWARE ═══════════
 app.use(cors());
