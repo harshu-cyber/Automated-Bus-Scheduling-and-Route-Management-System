@@ -61,7 +61,7 @@ async function loadDashboard() {
 // ═══════════ ROUTES ═══════════
 async function loadRoutes() {
     const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-    const params = (user.role === 'depot' && user.location) ? { depot: user.location } : undefined;
+    const params = (user.role === 'depot' && user.depot) ? { depot: user.depot } : undefined;
     const data = await API.getRoutes(params);
     if (!data) return;
     const tbody = document.querySelector('.data-table tbody');
@@ -83,7 +83,7 @@ async function loadRoutes() {
 // ═══════════ BUSES ═══════════
 async function loadBuses() {
     const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-    const params = (user.role === 'depot' && user.location) ? { depot: user.location } : undefined;
+    const params = (user.role === 'depot' && user.depot) ? { depot: user.depot } : undefined;
     const data = await API.getBuses(params);
     if (!data) return;
     const tbody = document.querySelector('.data-table tbody');
@@ -107,7 +107,7 @@ async function loadBuses() {
 let globalScheduleData = [];
 async function loadSchedule() {
     const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-    const params = (user.role === 'depot' && user.location) ? { depot: user.location } : undefined;
+    const params = (user.role === 'depot' && user.depot) ? { depot: user.depot } : undefined;
     const data = await API.getSchedule(params);
     if (!data) return;
     globalScheduleData = data;
@@ -153,7 +153,7 @@ async function loadSchedule() {
 // ═══════════ CREW ═══════════
 async function loadCrew() {
     const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-    const params = (user.role === 'depot' && user.location) ? { depot: user.location } : undefined;
+    const params = (user.role === 'depot' && user.depot) ? { depot: user.depot } : undefined;
     const data = await API.getCrew(params);
     if (!data) return;
     const tbody = document.querySelector('.data-table tbody');
@@ -227,7 +227,12 @@ async function editResource(path, id, modalId, fieldMap) {
     
     Object.keys(fieldMap).forEach(key => {
         const input = modal.querySelector(`#${key}`);
-        if (input) input.value = item[fieldMap[key]];
+        if (input) {
+            // Do not overwrite if the input is locked (readonly) by the DepotManager script
+            if (!input.readOnly) {
+                input.value = item[fieldMap[key]] || '';
+            }
+        }
     });
     
     modal.dataset.editId = id;
@@ -235,7 +240,13 @@ async function editResource(path, id, modalId, fieldMap) {
 }
 
 const editRoute = (id) => editResource('routes', id, 'routeModal', { 'routeId': 'routeId', 'routeName': 'name' });
-const editBus = (id) => editResource('buses', id, 'busModal', { 'busReg': 'regNo', 'busType': 'type' });
+const editBus = (id) => editResource('buses', id, 'busModal', { 
+    'busReg': 'regNo', 
+    'busType': 'type',
+    'busCapacity': 'capacity',
+    'busDepot': 'depot',
+    'busStatus': 'status'
+});
 const editCrew = (id) => editResource('crew', id, 'crewModal', { 
     'crewId': 'crewId', 
     'crewName': 'name', 

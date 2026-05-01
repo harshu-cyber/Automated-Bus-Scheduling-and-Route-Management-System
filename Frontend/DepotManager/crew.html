@@ -64,7 +64,8 @@
                     </div>
                     <div class="form-group" style="flex:1">
                         <label>Department / Depot</label>
-                        <input type="text" class="form-input" id="crewDepot" name="depot" placeholder="e.g. Kashmiri Gate Depot">
+                        <input type="text" class="form-input" id="crewDepot" name="depot" placeholder="e.g. Kashmiri Gate Depot" list="depotList" required>
+                        <datalist id="depotList"></datalist>
                     </div>
                 </div>
                 <div class="form-row" style="display:flex; gap:15px;">
@@ -115,15 +116,23 @@
         };
     </script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-            if (user.location) {
-                const depotInput = document.getElementById('crewDepot');
-                if (depotInput) {
-                    depotInput.value = user.location;
-                    depotInput.readOnly = true;
-                    depotInput.style.backgroundColor = 'var(--surface-light)';
-                }
+            const depotInput = document.getElementById('crewDepot');
+            if (user.depot && depotInput) {
+                depotInput.value = user.depot;
+                // Removed readonly to allow typing as requested
+            }
+            
+            // Populate datalist for autocomplete
+            const depots = await API.getDepots();
+            const depotList = document.getElementById('depotList');
+            if (depots && depotList) {
+                depots.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = d.name;
+                    depotList.appendChild(option);
+                });
             }
         });
     </script>

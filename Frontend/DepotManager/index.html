@@ -55,7 +55,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-            const depotName = user.location || 'Central Depot';
+            const depotName = user.depot || 'Central Depot';
             
             // 1. Fetch data
             const buses = await API.getBuses({ depot: depotName });
@@ -65,7 +65,7 @@
             // 2. Update Stats
             document.getElementById('busCount').innerText = buses?.length || 0;
             document.getElementById('routeCount').innerText = [...new Set(schedules?.map(s => s.route))].length || 0;
-            document.getElementById('driverCount').innerText = drivers?.filter(d => d.status === 'Available').length || 0;
+            document.getElementById('driverCount').innerText = drivers?.filter(d => d.status === 'On Duty' || d.status === 'Available').length || 0;
 
             // 3. Update Table
             const tbody = document.getElementById('scheduleBody');
@@ -84,13 +84,17 @@
             const autoGenBtn = document.getElementById('autoGenBtn');
             if (autoGenBtn) {
                 autoGenBtn.onclick = async () => {
+                    if (!user.depotId) {
+                        UI.showAlert('Depot ID not found. Please log out and log back in.', 'error');
+                        return;
+                    }
                     autoGenBtn.disabled = true;
                     autoGenBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-                    const res = await API.generateSchedule();
+                    const res = await API.generateSchedule({ depotId: user.depotId });
                     if (res) {
                         UI.showAlert(`Generated ${res.count} trips!`);
                         // Reload data
-                        const newSchedules = await API.getSchedule();
+                        const newSchedules = await API.getSchedule({ depot: depotName });
                         tbody.innerHTML = newSchedules.slice(0, 10).map(s => `
                             <tr>
                                 <td><strong>${s.time}</strong></td>
@@ -100,6 +104,7 @@
                                 <td><span class="badge badge-green">Ready</span></td>
                             </tr>
                         `).join('');
+                        document.getElementById('routeCount').innerText = [...new Set(newSchedules?.map(s => s.route))].length || 0;
                     }
                     autoGenBtn.disabled = false;
                     autoGenBtn.innerHTML = '<i class="fas fa-magic"></i> Auto-Generate Schedule';

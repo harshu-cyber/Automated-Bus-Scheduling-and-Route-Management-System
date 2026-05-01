@@ -67,7 +67,8 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-            const schedules = await API.getSchedule();
+            const params = user.depot ? { depot: user.depot } : undefined;
+            const schedules = await API.getSchedule(params);
             const myTrips = schedules?.filter(s => s.driver === user.fullName) || [];
             
             const tbody = document.getElementById('myAssigns');

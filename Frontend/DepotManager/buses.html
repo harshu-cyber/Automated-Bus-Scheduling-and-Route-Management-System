@@ -8,52 +8,126 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../Admin/admin.css">
 </head>
-<body data-page="depot-buses">
+<body data-page="buses">
 
     <main class="main-content">
         <section class="page active">
-            <div class="page-header" style="margin-bottom:30px;">
-                <h2 style="color:var(--text-main)">Buses at My Depot</h2>
-                <p style="color:var(--text-muted)">Overview of the fleet currently managed by your location.</p>
+            <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                <div>
+                    <h2 style="color:var(--text-main)">Buses at My Depot</h2>
+                    <p style="color:var(--text-muted)">Overview of the fleet currently managed by your location.</p>
+                </div>
+                <button class="btn-primary" onclick="openModal('busModal')" style="background:#9FE870; color:#111; border:none; padding:12px 20px; border-radius:10px; font-weight:700; cursor:pointer;">
+                    <i class="fas fa-plus"></i> Add New Bus
+                </button>
             </div>
 
             <div class="table-card">
                 <table class="data-table">
                     <thead>
-                        <tr><th>Reg. No</th><th>Type</th><th>Capacity</th><th>Status</th><th>Last Service</th></tr>
+                        <tr><th>Reg. No</th><th>Type</th><th>Capacity</th><th>Depot</th><th>Status</th><th>Last Service</th><th>Actions</th></tr>
                     </thead>
                     <tbody id="busesBody">
-                        <tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted)">Loading your fleet...</td></tr>
+                        <tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted)">Loading your fleet...</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
     </main>
 
+    <!-- Bus Modal -->
+    <div class="modal-overlay" id="busModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Bus Details</h3>
+                <button class="modal-close" onclick="closeModal('busModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <form class="modal-body" id="busForm">
+                <div class="form-group">
+                    <label>Registration Number</label>
+                    <input type="text" class="form-input" id="busReg" name="regNo" placeholder="DL-1PA-1234" required>
+                </div>
+                <div class="form-row" style="display:flex; gap:15px;">
+                    <div class="form-group" style="flex:1">
+                        <label>Type</label>
+                        <select class="form-input" id="busType" name="type">
+                            <option value="AC">AC</option>
+                            <option value="Non-AC">Non-AC</option>
+                            <option value="Electric">Electric</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Capacity</label>
+                        <input type="number" class="form-input" id="busCapacity" name="capacity" placeholder="50">
+                    </div>
+                </div>
+                <div class="form-row" style="display:flex; gap:15px;">
+                    <div class="form-group" style="flex:1">
+                        <label>Depot</label>
+                        <input type="text" class="form-input" id="busDepot" name="depot" placeholder="e.g. Kashmiri Gate Depot" list="depotListBus" required>
+                        <datalist id="depotListBus"></datalist>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Status</label>
+                        <select class="form-input" id="busStatus" name="status">
+                            <option value="Active">Active</option>
+                            <option value="Under Maintenance">Under Maintenance</option>
+                            <option value="Retired">Retired</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer" style="margin-top:20px; text-align:right;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('busModal')" style="padding:10px 20px; border-radius:8px; border:1px solid var(--border-color); background:transparent; color:var(--text-main); margin-right:10px; cursor:pointer;">Cancel</button>
+                    <button type="submit" class="btn-primary" style="padding:10px 20px; border-radius:8px; border:none; background:#9FE870; color:#111; font-weight:700; cursor:pointer;">Save Bus</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="../components/ui.js"></script>
     <script src="../components/api.js"></script>
+    <script src="../Admin/admin.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-            const depotName = user.location || 'Central Depot';
+            const depotInput = document.getElementById('busDepot');
+            if (user.depot && depotInput) {
+                depotInput.value = user.depot;
+                // Removed readonly to allow typing as requested
+            }
             
-            const buses = await API.getBuses({ depot: depotName });
-            const tbody = document.getElementById('busesBody');
-            
-            if (buses && buses.length > 0) {
-                tbody.innerHTML = buses.map(b => `
-                    <tr>
-                        <td><strong>${b.regNo}</strong></td>
-                        <td>${b.type}</td>
-                        <td>${b.capacity}</td>
-                        <td><span class="badge ${b.status === 'Active' ? 'badge-green' : 'badge-red'}">${b.status}</span></td>
-                        <td>${new Date(b.lastService).toLocaleDateString()}</td>
-                    </tr>
-                `).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted)">No buses currently assigned to this depot.</td></tr>';
+            // Populate datalist for autocomplete
+            const depots = await API.getDepots();
+            const depotList = document.getElementById('depotListBus');
+            if (depots && depotList) {
+                depots.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = d.name;
+                    depotList.appendChild(option);
+                });
             }
         });
+
+        document.getElementById('busForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const modal = document.getElementById('busModal');
+            const id = modal.dataset.editId;
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            let res;
+            if (id) {
+                res = await API.updateRes('buses', id, data);
+            } else {
+                res = await API.fetch('/buses', { method: 'POST', body: JSON.stringify(data) });
+            }
+
+            if (res) {
+                UI.showAlert('Bus saved successfully!');
+                closeModal('busModal');
+                loadBuses();
+            }
+        };
     </script>
 </body>
 </html>

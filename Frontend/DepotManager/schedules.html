@@ -106,7 +106,7 @@
 
         async function loadSchedule() {
             const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-            const data = await API.getSchedule(user.location ? { depot: user.location } : undefined);
+            const data = await API.getSchedule(user.depot ? { depot: user.depot } : undefined);
             globalScheduleData = data || [];
             const grid = document.querySelector('.schedule-grid');
             
@@ -163,9 +163,14 @@
             const autoGenBtn = document.getElementById('autoGenBtn');
             if (autoGenBtn) {
                 autoGenBtn.onclick = async () => {
+                    const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+                    if (!user.depotId) {
+                        UI.showAlert('Depot ID not found. Please log out and log back in.', 'error');
+                        return;
+                    }
                     autoGenBtn.disabled = true;
                     autoGenBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-                    const res = await API.generateSchedule();
+                    const res = await API.generateSchedule({ depotId: user.depotId });
                     if (res) {
                         UI.showAlert(`Generated ${res.count} trips for today!`);
                         loadSchedule();
@@ -255,6 +260,9 @@
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 const data = Object.fromEntries(formData.entries());
+                const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+                if (user.depot) data.depot = user.depot;
+                
                 const id = document.getElementById('scheduleModal').dataset.editId;
                 let res;
                 if (id) {

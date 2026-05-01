@@ -46,6 +46,11 @@ exports.createRoute = async (req, res) => {
             }
         }
 
+        if (data.depot) {
+            const d = await require('../models/Depot').findOne({ name: data.depot });
+            if (d) data.depotId = d._id;
+        }
+
         const route = await Route.create(data);
         res.status(201).json(route);
     } catch (err) {
@@ -55,6 +60,10 @@ exports.createRoute = async (req, res) => {
 
 exports.updateRoute = async (req, res) => {
     try {
+        if (req.body.depot) {
+            const d = await require('../models/Depot').findOne({ name: req.body.depot });
+            if (d) req.body.depotId = d._id;
+        }
         const route = await Route.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!route) return res.status(404).json({ message: 'Route not found' });
         res.json(route);

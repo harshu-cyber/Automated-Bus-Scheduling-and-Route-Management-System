@@ -115,7 +115,7 @@
     <script>
         async function loadRoutes() {
             const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-            const data = await API.getRoutes(user.location ? { depot: user.location } : undefined);
+            const data = await API.getRoutes(user.depot ? { depot: user.depot } : undefined);
             if (data) RouteCards.render('routeCardsContainer', data, { editable: true });
         }
         document.addEventListener('DOMContentLoaded', () => loadRoutes());
@@ -178,7 +178,13 @@
             if (stopNames.length < 2) { UI.showAlert('Add at least 2 stoppages', 'error'); return; }
             const name = document.getElementById('routeName').value.trim();
             if (!name) { UI.showAlert('Route name is required', 'error'); return; }
-            const data = { name, stopNames, status: document.getElementById('routeStatus').value, startPoint: stopNames[0], endPoint: stopNames[stopNames.length - 1], stops: stopNames.length, distance: parseFloat(((stopNames.length - 1) * 1.5).toFixed(1)) };
+            const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+            const data = { 
+                name, stopNames, status: document.getElementById('routeStatus').value, 
+                startPoint: stopNames[0], endPoint: stopNames[stopNames.length - 1], 
+                stops: stopNames.length, distance: parseFloat(((stopNames.length - 1) * 1.5).toFixed(1)),
+                depot: user.depot // Add the depot!
+            };
             let res;
             if (editId) { res = await API.updateRes('routes', editId, data); }
             else { res = await API.fetch('/routes', { method: 'POST', body: JSON.stringify(data) }); }

@@ -24,6 +24,10 @@ exports.getBusById = async (req, res) => {
 
 exports.createBus = async (req, res) => {
     try {
+        if (req.body.depot) {
+            const d = await require('../models/Depot').findOne({ name: req.body.depot });
+            if (d) req.body.depotId = d._id;
+        }
         const bus = await Bus.create(req.body);
         res.status(201).json(bus);
     } catch (err) {
@@ -33,6 +37,10 @@ exports.createBus = async (req, res) => {
 
 exports.updateBus = async (req, res) => {
     try {
+        if (req.body.depot) {
+            const d = await require('../models/Depot').findOne({ name: req.body.depot });
+            if (d) req.body.depotId = d._id;
+        }
         const bus = await Bus.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!bus) return res.status(404).json({ message: 'Bus not found' });
         res.json(bus);

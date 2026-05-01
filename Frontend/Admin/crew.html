@@ -65,7 +65,8 @@
                     </div>
                     <div class="form-group" style="flex:1">
                         <label>Department / Depot</label>
-                        <input type="text" class="form-input" id="crewDepot" name="depot" placeholder="e.g. Kashmiri Gate Depot">
+                        <input type="text" class="form-input" id="crewDepot" name="depot" placeholder="e.g. Kashmiri Gate Depot" list="depotList" required>
+                        <datalist id="depotList"></datalist>
                     </div>
                 </div>
                 <div class="form-row" style="display:flex; gap:15px;">
@@ -114,6 +115,19 @@
                 loadCrew();
             }
         };
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const depots = await API.getDepots();
+            const depotList = document.getElementById('depotList');
+            if (depots && depotList) {
+                depots.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = d.name;
+                    depotList.appendChild(option);
+                });
+            }
+        });
     </script>
 </body>
 </html>
