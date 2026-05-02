@@ -25,7 +25,9 @@ exports.getCrewById = async (req, res) => {
 
 exports.createCrew = async (req, res) => {
     try {
-        const { role, phone, name } = req.body;
+        console.log('[Crew] Incoming Create Request:', req.body);
+        const { role, phone, name, crewId } = req.body;
+        
         if (!phone) {
             return res.status(400).json({ message: 'Phone number is required to generate credentials' });
         }
@@ -33,41 +35,78 @@ exports.createCrew = async (req, res) => {
         const isManager = role === 'Depot Manager';
         const prefix = isManager ? 'DM-' : 'CR-';
 
-        const lastCrew = await Crew.findOne({ crewId: new RegExp(`^${prefix}`, 'i') }).sort({ crewId: -1 }).lean();
-        let nextNum = 1;
-        if (lastCrew && lastCrew.crewId) {
-            const match = lastCrew.crewId.match(new RegExp(`^${prefix}(\\d+)`, 'i'));
-            if (match) nextNum = parseInt(match[1], 10) + 1;
+        // Use provided crewId or auto-generate
+        let finalCrewId = crewId;
+        if (!finalCrewId) {
+            const lastCrew = await Crew.findOne({ crewId: new RegExp(`^${prefix}`, 'i') }).sort({ crewId: -1 }).lean();
+            let nextNum = 1;
+            if (lastCrew && lastCrew.crewId) {
+                const match = lastCrew.crewId.match(new RegExp(`^${prefix}(\\d+)`, 'i'));
+                if (match) nextNum = parseInt(match[1], 10) + 1;
+            }
+            finalCrewId = `${prefix}${String(nextNum).padStart(3, '0')}`;
         }
-        req.body.crewId = `${prefix}${String(nextNum).padStart(3, '0')}`;
+        req.body.crewId = finalCrewId;
+
+        // Check if User already exists with this ID
+        const User = require('../models/User');
+        const existingUser = await User.findOne({ username: finalCrewId.toLowerCase() });
+        if (existingUser) {
+            console.error(`[Crew] User already exists with ID: ${finalCrewId}`);
+            return res.status(400).json({ message: `A login account with ID ${finalCrewId} already exists. Please choose a different ID or delete the old account.` });
+        }
+
+        // ═══════════════════════════════════════════════
+        // DEPOT LOOKUP ENHANCEMENT
+        // ═══════════════════════════════════════════════
+        const Depot = require('../models/Depot');
+        let dId = null;
+        let finalDepotName = req.body.depot || '';
+
+        if (finalDepotName) {
+            // Case-insensitive exact match
+            const d = await Depot.findOne({ name: { $regex: new RegExp(`^${finalDepotName.trim()}$`, 'i') } });
+            if (d) {
+                dId = d._id;
+                finalDepotName = d.name; // Use canonical name
+            }
+        }
+        
+        req.body.depotId = dId;
+        req.body.depot = finalDepotName;
 
         const member = await Crew.create(req.body);
 
         let userRole = 'driver';
-        if (role === 'Depot Manager') userRole = 'depot';
-        else if (role === 'Conductor') userRole = 'conductor';
-
-        const User = require('../models/User');
-        const Depot = require('../models/Depot');
-        let dId = null;
-        if (req.body.depot) {
-            const d = await Depot.findOne({ name: req.body.depot });
-            if (d) dId = d._id;
-        }
+        const normalizedRole = (role || '').toLowerCase();
+        if (normalizedRole.includes('manager')) userRole = 'depot';
+        else if (normalizedRole.includes('conductor')) userRole = 'conductor';
 
         await User.create({
-            username: req.body.crewId.toLowerCase(),
+            username: finalCrewId.toLowerCase(),
             password: phone,
             role: userRole,
             fullName: name,
             phone: phone,
-            depot: req.body.depot || '',
+            depot: finalDepotName,
             depotId: dId
         });
 
-        res.status(201).json(member);
+        console.log(`✅ [Crew] Created member ${finalCrewId} (${name}) and linked User account (Role: ${userRole})`);
+
+        res.status(201).json({
+            member,
+            credentials: {
+                username: finalCrewId,
+                password: phone
+            }
+        });
     } catch (err) {
-        res.status(400).json({ message: 'Invalid data', error: err.message });
+        console.error('❌ [Crew] Create Error:', err.message);
+        res.status(400).json({ 
+            message: err.message.includes('duplicate key') ? 'Duplicate ID or Phone number' : 'Failed to create crew member', 
+            error: err.message 
+        });
     }
 };
 

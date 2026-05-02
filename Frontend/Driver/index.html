@@ -97,7 +97,7 @@
                             <td>${s.time}${dateLabel ? `<br><small style="color:var(--text-muted)">${s.day}, ${dateLabel}</small>` : ''}</td>
                             <td>${routeDisplay}</td>
                             <td>${s.bus}</td>
-                            <td><button class="btn-sm" onclick="selectTrip('${s.route}', '${s.bus}')">Select</button></td>
+                            <td><button class="btn-sm" onclick="selectTrip('${s.route}', '${s.bus}', '${s._id}')">Select</button></td>
                         </tr>
                     `;
                 }).join('');
@@ -109,16 +109,22 @@
             const trackBar = document.getElementById('trackingStatus');
             const mapEl = document.getElementById('driverMap');
 
-            window.selectTrip = (route, bus) => {
+            window.selectTrip = (route, bus, id) => {
                 if (trackingInterval) return alert('Please end your current active trip first.');
-                activeTrip = { route, bus };
+                activeTrip = { route, bus, id };
                 document.getElementById('routeLabel').innerText = route;
                 document.getElementById('busLabel').innerText = `Assigned Bus: ${bus}`;
+                UI.showAlert(`Selected Trip: ${route}`);
             };
 
             const beginTracking = async (trip) => {
                 activeTrip = trip;
                 localStorage.setItem('dtcsl_active_trip', JSON.stringify(trip));
+
+                // Update schedule status to In-Progress in DB
+                if (trip.id) {
+                    await API.updateRes('schedule', trip.id, { status: 'In-Progress' });
+                }
 
                 document.getElementById('routeLabel').innerText = trip.route;
                 document.getElementById('busLabel').innerText = `Assigned Bus: ${trip.bus}`;
@@ -171,7 +177,8 @@
                 beginTracking(activeTrip);
             };
 
-            endBtn.onclick = () => {
+            endBtn.onclick = async () => {
+                const tripToComplete = activeTrip;
                 localStorage.removeItem('dtcsl_active_trip');
                 activeTrip = null;
                 label.innerText = 'Not Started';
@@ -183,6 +190,11 @@
                 
                 clearInterval(trackingInterval);
                 trackingInterval = null;
+
+                // Mark trip as completed in DB
+                if (tripToComplete && tripToComplete.id) {
+                    await API.updateRes('schedule', tripToComplete.id, { status: 'Completed' });
+                }
                 
                 document.getElementById('routeLabel').innerText = 'Select Trip 🚌';
                 document.getElementById('busLabel').innerText = 'Assigned Bus: Ready';

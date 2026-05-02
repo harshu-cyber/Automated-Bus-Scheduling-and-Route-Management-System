@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Routes - DTCSL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../Admin/admin.css">
+    <link rel="stylesheet" href="../components/route-cards.css">
+</head>
+<body data-page="passenger-routes">
+
+    <main class="main-content">
+        <section class="page active">
+            <div class="page-header" style="margin-bottom:30px;">
+                <h2 style="color:var(--text-main)">Explore Bus Routes</h2>
+                <p style="color:var(--text-muted); font-size:14px; margin-top:5px;">Find available routes, stops, and schedules.</p>
+            </div>
+
+            <div class="search-box" style="margin-bottom:30px; max-width:500px; display:flex; background:var(--card); padding:5px 15px; border-radius:12px; border:1px solid var(--border);">
+                <i class="fas fa-search" style="margin-top:12px; margin-right:10px; color:var(--text-muted);"></i>
+                <input type="text" id="routeSearch" placeholder="Search by Route ID or Name..." style="background:transparent; border:none; color:var(--text); padding:10px 0; width:100%; outline:none;">
+            </div>
+
+            <div id="routesContainer" class="route-cards-grid">
+                <!-- Dynamic -->
+                <div style="text-align:center; padding:40px; color:var(--text-muted);">Loading available routes...</div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../components/ui.js"></script>
+    <script src="../components/api.js"></script>
+    <script src="../components/route-cards.js"></script>
+    <script>
+        let allRoutes = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            allRoutes = await API.getRoutes();
+            renderRoutes(allRoutes);
+
+            document.getElementById('routeSearch').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                const filtered = allRoutes.filter(r => 
+                    r.routeId.toLowerCase().includes(query) || 
+                    r.name.toLowerCase().includes(query)
+                );
+                renderRoutes(filtered);
+            });
+        });
+
+        function renderRoutes(routes) {
+            const container = document.getElementById('routesContainer');
+            if (!routes || routes.length === 0) {
+                container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted);">No routes found matching your search.</div>';
+                return;
+            }
+            RouteCards.render('routesContainer', routes, { editable: false });
+        }
+    </script>
+</body>
+</html>

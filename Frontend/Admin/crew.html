@@ -54,8 +54,8 @@
                         </select>
                     </div>
                     <div class="form-group" style="flex:1">
-                        <label>Phone (Login Password)</label>
-                        <input type="tel" class="form-input" id="crewPhone" name="phone" placeholder="+91 XXXXX XXXXX" required>
+                        <label>Phone (Used as Login Password)</label>
+                        <input type="tel" class="form-input" id="crewPhone" name="phone" placeholder="10-digit mobile number" required>
                     </div>
                 </div>
                 <div class="form-row" style="display:flex; gap:15px;">
@@ -83,9 +83,12 @@
                         </select>
                     </div>
                 </div>
+                <!-- Hidden Crew ID field -->
+                <input type="hidden" id="crewIdField" name="crewId">
+
                 <div class="modal-footer" style="margin-top:20px; text-align:right;">
                     <button type="button" class="btn-secondary" onclick="closeModal('crewModal')" style="padding:10px 20px; border-radius:8px; border:1px solid var(--border-color); background:transparent; color:var(--text-main); margin-right:10px; cursor:pointer;">Cancel</button>
-                    <button type="submit" class="btn-primary" style="padding:10px 20px; border-radius:8px; border:none; background:#9FE870; color:#111; font-weight:700; cursor:pointer;">Save Member</button>
+                    <button type="submit" class="btn-primary" id="saveCrewBtn" style="padding:10px 20px; border-radius:8px; border:none; background:#9FE870; color:#111; font-weight:700; cursor:pointer;">Save Member</button>
                 </div>
             </form>
         </div>
@@ -97,22 +100,40 @@
     <script>
         document.getElementById('crewForm').onsubmit = async (e) => {
             e.preventDefault();
+            const btn = document.getElementById('saveCrewBtn');
+            const originalText = btn.textContent;
+            
             const modal = document.getElementById('crewModal');
             const id = modal.dataset.editId;
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
 
-            let res;
-            if (id) {
-                res = await API.updateRes('crew', id, data);
-            } else {
-                res = await API.fetch('/crew', { method: 'POST', body: JSON.stringify(data) });
-            }
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
 
-            if (res) {
-                UI.showAlert('Crew member saved successfully!');
-                closeModal('crewModal');
-                loadCrew();
+            try {
+                let res;
+                if (id) {
+                    res = await API.updateRes('crew', id, data);
+                    if (res) {
+                        UI.showAlert('Crew member updated successfully!');
+                        closeModal('crewModal');
+                        loadCrew();
+                    }
+                } else {
+                    res = await API.fetch('/crew', { method: 'POST', body: JSON.stringify(data) });
+                    if (res && res.credentials) {
+                        const { username, password } = res.credentials;
+                        alert(`✅ CREW MEMBER ADDED SUCCESSFULLY!\n\n----------------------------------\nLOGIN CREDENTIALS:\n----------------------------------\nUsername: ${username}\nPassword: ${password}\n----------------------------------\n\nPlease share these credentials with the crew member.`);
+                        closeModal('crewModal');
+                        loadCrew();
+                    }
+                }
+            } catch (err) {
+                console.error("Submit error:", err);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         };
     </script>

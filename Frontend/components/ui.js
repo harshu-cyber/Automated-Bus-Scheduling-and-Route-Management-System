@@ -34,8 +34,8 @@ const UI = {
             ],
             passenger: [
                 { name: 'Bus Search', icon: 'fas fa-search-location', link: '../Passenger/index.html', id: 'passenger-home' },
-                { name: 'Live Tracking', icon: 'fas fa-map-marker-alt', link: '../Passenger/tracking.html', id: 'passenger-tracking' },
-                { name: 'My Tickets', icon: 'fas fa-ticket-alt', link: '../Passenger/tickets.html', id: 'passenger-tickets' }
+                { name: 'Routes', icon: 'fas fa-route', link: '../Passenger/routes.html', id: 'passenger-routes' },
+                { name: 'Live Tracking', icon: 'fas fa-map-marker-alt', link: '../Passenger/tracking.html', id: 'passenger-tracking' }
             ]
         };
 
