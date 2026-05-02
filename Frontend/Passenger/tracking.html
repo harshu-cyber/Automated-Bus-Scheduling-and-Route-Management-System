@@ -40,18 +40,31 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const map = L.map('liveMap').setView([28.6139, 77.2090], 12);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
             
             const busMarkers = {};
-            const socket = SocketClient.connect();
 
-            socket.on('locationUpdate', (data) => {
-                const { busId, lat, lng, routeId } = data;
-                if (!busMarkers[busId]) {
-                    busMarkers[busId] = L.marker([lat, lng]).addTo(map)
-                        .bindPopup(`<b>Bus: ${busId}</b><br>Route: ${routeId}`);
+            // Add smooth marker movement using CSS transitions on Leaflet markers
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .leaflet-marker-icon, .leaflet-marker-shadow {
+                    transition: all 1s linear;
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Using the singleton SocketClient wrapper instead of raw socket calls
+            SocketClient.onLocationUpdate((data) => {
+                // Destructure matching what backend emits: receiveLocation -> busRegNo, lat, lng, driverName
+                const { busRegNo, lat, lng, driverName } = data;
+                
+                if (!busMarkers[busRegNo]) {
+                    busMarkers[busRegNo] = L.marker([lat, lng]).addTo(map)
+                        .bindPopup(`<b>Bus: ${busRegNo}</b><br>Driver: ${driverName || 'Unknown'}`);
                 } else {
-                    busMarkers[busId].setLatLng([lat, lng]);
+                    busMarkers[busRegNo].setLatLng([lat, lng]);
                 }
             });
         });

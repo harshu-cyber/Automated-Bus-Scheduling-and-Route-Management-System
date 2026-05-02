@@ -6,6 +6,7 @@
     <title>Driver - DTCSL</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="../Admin/admin.css">
     <style>
         .trip-card { background: var(--card); border-radius: 20px; border: 1px solid var(--border); padding: 40px; text-align: center; max-width: 600px; margin: 40px auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
@@ -24,6 +25,10 @@
         .tracking-status.visible { opacity: 1; }
         .gps-pulse { width: 10px; height: 10px; border-radius: 50%; background: #9FE870; box-shadow: 0 0 10px #9FE870; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(159,232,112, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(159,232,112, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(159,232,112, 0); } }
+        
+        /* Map Styles */
+        #driverMap { height: 250px; border-radius: 12px; border: 1px solid var(--border); margin-top: 25px; display: none; z-index: 1; }
+        .leaflet-marker-icon { transition: all 1s linear; }
     </style>
 </head>
 <body data-page="driver-trips">
@@ -46,6 +51,9 @@
                     <div class="gps-pulse"></div>
                     <span>Sending Live GPS Location (Every 3s)</span>
                 </div>
+
+                <!-- Driver Map showing active route -->
+                <div id="driverMap"></div>
             </div>
 
             <div class="table-card">
@@ -58,12 +66,16 @@
         </section>
     </main>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../components/ui.js"></script>
     <script src="../components/api.js"></script>
     <script src="../components/socket_client.js"></script>
     <script>
         let trackingInterval = null;
         let activeTrip = null;
+        let map = null;
+        let routeLayer = null;
+        let driverMarker = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
@@ -91,43 +103,97 @@
                 }).join('');
             }
 
+            const startBtn = document.getElementById('startBtn');
+            const endBtn = document.getElementById('endBtn');
+            const label = document.getElementById('tripLabel');
+            const trackBar = document.getElementById('trackingStatus');
+            const mapEl = document.getElementById('driverMap');
+
             window.selectTrip = (route, bus) => {
+                if (trackingInterval) return alert('Please end your current active trip first.');
                 activeTrip = { route, bus };
                 document.getElementById('routeLabel').innerText = route;
                 document.getElementById('busLabel').innerText = `Assigned Bus: ${bus}`;
             };
 
-            const startBtn = document.getElementById('startBtn');
-            const endBtn = document.getElementById('endBtn');
-            const label = document.getElementById('tripLabel');
-            const trackBar = document.getElementById('trackingStatus');
+            const beginTracking = async (trip) => {
+                activeTrip = trip;
+                localStorage.setItem('dtcsl_active_trip', JSON.stringify(trip));
 
-            startBtn.onclick = () => {
-                if(!activeTrip) { alert('Please select a trip first!'); return; }
+                document.getElementById('routeLabel').innerText = trip.route;
+                document.getElementById('busLabel').innerText = `Assigned Bus: ${trip.bus}`;
+
                 label.innerText = 'Active Duty';
                 label.className = 'trip-status status-active';
                 startBtn.style.display = 'none';
                 endBtn.style.display = 'inline-block';
                 trackBar.classList.add('visible');
-                
-                // Start tracking
+                mapEl.style.display = 'block';
+
+                if (!map) {
+                    map = L.map('driverMap').setView([28.6139, 77.2090], 12);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(map);
+                }
+
+                // Try fetching route to draw it on map
+                try {
+                    const routesRes = await API.getRoutes();
+                    const routeDetails = routesRes.find(r => r.routeId === trip.route);
+                    if (routeDetails && routeDetails.coordinates && routeDetails.coordinates.length > 0) {
+                        const latlngs = routeDetails.coordinates.map(c => [c.lat, c.lng]);
+                        if (routeLayer) map.removeLayer(routeLayer);
+                        routeLayer = L.polyline(latlngs, {color: '#9FE870', weight: 5}).addTo(map);
+                        map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
+                    }
+                } catch(e) {
+                    console.error("Could not fetch route details for map:", e);
+                }
+
+                // Start tracking loop
+                if (trackingInterval) clearInterval(trackingInterval);
                 trackingInterval = setInterval(() => {
-                    // Simulating location movement near Delhi
                     const lat = 28.6139 + (Math.random() - 0.5) * 0.01;
                     const lng = 77.2090 + (Math.random() - 0.5) * 0.01;
-                    SocketClient.sendLocation(activeTrip.bus, lat, lng, user.fullName);
+                    SocketClient.sendLocation(trip.bus, lat, lng, user.fullName);
+                    
+                    if (!driverMarker) {
+                        driverMarker = L.marker([lat, lng]).addTo(map).bindPopup('You are here');
+                    } else {
+                        driverMarker.setLatLng([lat, lng]);
+                    }
                 }, 3000);
             };
 
+            startBtn.onclick = () => {
+                if(!activeTrip) { alert('Please select a trip first!'); return; }
+                beginTracking(activeTrip);
+            };
+
             endBtn.onclick = () => {
+                localStorage.removeItem('dtcsl_active_trip');
+                activeTrip = null;
                 label.innerText = 'Not Started';
                 label.className = 'trip-status status-idle';
                 startBtn.style.display = 'inline-block';
                 endBtn.style.display = 'none';
                 trackBar.classList.remove('visible');
+                mapEl.style.display = 'none';
+                
                 clearInterval(trackingInterval);
+                trackingInterval = null;
+                
+                document.getElementById('routeLabel').innerText = 'Select Trip 🚌';
+                document.getElementById('busLabel').innerText = 'Assigned Bus: Ready';
                 UI.showAlert('Trip Ended Successfully! 🏁');
             };
+
+            // Auto-resume trip if exists in localStorage (survives tab switch / refresh)
+            const savedTrip = localStorage.getItem('dtcsl_active_trip');
+            if (savedTrip) {
+                beginTracking(JSON.parse(savedTrip));
+            }
         });
     </script>
 </body>
