@@ -88,7 +88,22 @@ const UI = {
                     <input type="text" id="globalSearch" placeholder="Search (buses, routes...)">
                 </div>
                 <button class="topbar-btn" id="themeToggle"><i class="fas fa-sun"></i></button>
-                <button class="topbar-btn"><i class="fas fa-bell"></i><span class="notif-dot"></span></button>
+                <button class="topbar-btn" id="notifBtn" style="position: relative;">
+                    <i class="fas fa-bell"></i><span class="notif-dot"></span>
+                    <div class="notif-dropdown" id="notifDropdown" style="display: none; position: absolute; top: 120%; right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 300px; z-index: 1000; overflow: hidden; text-align: left;">
+                        <div style="padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="font-size: 14px;">Notifications</strong>
+                            <span style="font-size: 10px; color: var(--text-muted); cursor: pointer;" onclick="UI.clearNotifs()">Clear All</span>
+                        </div>
+                        <div id="notifList" style="max-height: 350px; overflow-y: auto; padding: 10px 0;">
+                            <!-- Dynamic Notifications -->
+                            <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 12px;">No new alerts</div>
+                        </div>
+                        <div style="padding: 10px; text-align: center; border-top: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                            <a href="#" style="font-size: 11px; color: #9FE870; text-decoration: none; font-weight: 600;">View All Activity</a>
+                        </div>
+                    </div>
+                </button>
                 <div class="user-avatar" id="profileDropdownToggle" style="cursor: pointer; position: relative;">
                     <div class="avatar-circle">${fullName.charAt(0).toUpperCase()}</div>
                     <div>
@@ -228,21 +243,31 @@ const UI = {
         if (profileToggle && profileDropdown) {
             profileToggle.onclick = (e) => {
                 e.stopPropagation();
-                const isHidden = profileDropdown.style.display === 'none';
-                profileDropdown.style.display = isHidden ? 'block' : 'none';
+                profileDropdown.style.display = profileDropdown.style.display === 'none' ? 'block' : 'none';
+                if (document.getElementById('notifDropdown')) document.getElementById('notifDropdown').style.display = 'none';
             };
-            document.addEventListener('click', (e) => {
-                if (!profileToggle.contains(e.target)) {
-                    profileDropdown.style.display = 'none';
-                }
-            });
-            // Profile link hover styling dynamically if not done in CSS
-            const links = profileDropdown.querySelectorAll('a, #dropdownLogoutBtn');
-            links.forEach(l => {
-                l.addEventListener('mouseenter', () => l.style.background = 'var(--surface-light, rgba(255,255,255,0.05))');
-                l.addEventListener('mouseleave', () => l.style.background = 'transparent');
-            });
         }
+
+        // Notification Dropdown Toggle
+        const notifBtn = document.getElementById('notifBtn');
+        const notifDropdown = document.getElementById('notifDropdown');
+        if (notifBtn && notifDropdown) {
+            notifBtn.onclick = (e) => {
+                e.stopPropagation();
+                const isHidden = notifDropdown.style.display === 'none';
+                notifDropdown.style.display = isHidden ? 'block' : 'none';
+                if (profileDropdown) profileDropdown.style.display = 'none';
+                if (isHidden) UI.loadNotifications();
+            };
+        }
+
+        document.addEventListener('click', () => {
+            if (profileDropdown) profileDropdown.style.display = 'none';
+            if (notifDropdown) notifDropdown.style.display = 'none';
+        });
+
+        // Load notifications on init
+        UI.loadNotifications();
 
         // Logout Handlers (Both fixed and dropdown)
         const logoutActions = [document.getElementById('logoutBtn'), document.getElementById('dropdownLogoutBtn')];
@@ -256,6 +281,61 @@ const UI = {
                 };
             }
         });
+    },
+
+    loadNotifications: async () => {
+        const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+        const list = document.getElementById('notifList');
+        const dot = document.querySelector('.notif-dot');
+        if (!list) return;
+
+        let alerts = [
+            { title: 'System Online', body: 'All tracking services are operational.', icon: 'fa-check-circle', color: '#9FE870' }
+        ];
+
+        try {
+            if (user.role === 'driver') {
+                const myRouteRes = await API.fetch('/schedule/my-route');
+                if (myRouteRes && myRouteRes.data && myRouteRes.data.length > 0) {
+                    const next = myRouteRes.data[0];
+                    alerts.unshift({ 
+                        title: 'Upcoming Trip', 
+                        body: `Next trip: Route ${next.route.id} at ${next.time}`, 
+                        icon: 'fa-bus', 
+                        color: '#38bdf8' 
+                    });
+                }
+            } else if (user.role === 'depot' || user.role === 'admin') {
+                const dash = await API.fetch('/dashboard');
+                if (dash && dash.stats) {
+                    if (dash.stats.buses < 5) alerts.push({ title: 'Low Resource', body: 'Less than 5 buses registered in system.', icon: 'fa-exclamation-triangle', color: '#ef4444' });
+                }
+            }
+        } catch (e) { console.warn('Failed to fetch smart alerts'); }
+
+        if (dot) dot.style.display = alerts.length > 0 ? 'block' : 'none';
+
+        list.innerHTML = alerts.map(a => `
+            <div style="padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background .2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: ${a.color}20; color: ${a.color}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fas ${a.icon}" style="font-size: 14px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 13px; font-weight: 600; color: var(--text);">${a.title}</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.4;">${a.body}</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    clearNotifs: () => {
+        const list = document.getElementById('notifList');
+        if (list) list.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 12px;">No new alerts</div>';
+        const dot = document.querySelector('.notif-dot');
+        if (dot) dot.style.display = 'none';
+        UI.showAlert('All notifications cleared');
     }
 };
 
