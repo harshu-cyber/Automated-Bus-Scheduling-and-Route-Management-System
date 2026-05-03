@@ -180,17 +180,44 @@ async function loadDepots() {
     if (!data) return;
     const grid = document.querySelector('.depot-grid');
     grid.innerHTML = data.map(d => `
-        <div class="depot-card">
-            <h3>${d.name}</h3>
-            <p>${d.location}</p>
-            <div class="depot-stats">
-                <span><b>${d.busCount}</b> Buses</span>
-                <span><b>${d.routeCount}</b> Routes</span>
+        <div class="depot-card" style="position: relative;">
+            <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 8px;">
+                <button class="btn-icon" onclick="editDepot('${d._id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon btn-icon-red" onclick="deleteDepot('${d._id}')"><i class="fas fa-trash"></i></button>
             </div>
-            <div class="depot-bar"><div class="depot-fill" style="width:${d.utilization}%"></div></div>
+            <h3>${d.name}</h3>
+            <p style="color:var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;"><i class="fas fa-map-marker-alt" style="margin-right: 5px;"></i>${d.location || 'No location'}</p>
+            <div class="depot-stats">
+                <div style="flex: 1;">
+                    <span class="depot-num">${d.busCount || 0}</span>
+                    <small>Buses</small>
+                </div>
+                <div style="flex: 1;">
+                    <span class="depot-num">${d.routeCount || 0}</span>
+                    <small>Routes</small>
+                </div>
+                <div style="flex: 1;">
+                    <span class="depot-num">${d.totalCapacity || 50}</span>
+                    <small>Capacity</small>
+                </div>
+            </div>
+            <div style="margin-top: 15px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 5px;">
+                    <span>Utilization</span>
+                    <span>${d.utilization || 0}%</span>
+                </div>
+                <div class="depot-bar"><div class="depot-fill" style="width:${d.utilization || 0}%"></div></div>
+            </div>
         </div>
     `).join('');
 }
+
+const editDepot = (id) => editResource('depots', id, 'depotModal', { 
+    'depotName': 'name', 
+    'depotLoc': 'location', 
+    'depotCap': 'totalCapacity' 
+});
+const deleteDepot = (id) => deleteResource('depots', id, loadDepots);
 
 // ═══════════════════════════════════════════════════
 //  DYNAMIC ACTIONS & MODALS

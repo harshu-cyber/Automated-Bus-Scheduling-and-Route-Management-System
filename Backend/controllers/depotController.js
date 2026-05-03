@@ -1,9 +1,32 @@
 const Depot = require('../models/Depot');
+const Bus = require('../models/Bus');
+const Route = require('../models/Route');
+const Crew = require('../models/Crew');
 
 exports.getAllDepots = async (req, res) => {
     try {
-        const depots = await Depot.find({});
-        res.json(depots);
+        let depots = await Depot.find({});
+        
+        // Enhance with dynamic counts
+        const enhancedDepots = await Promise.all(depots.map(async (depot) => {
+            const busCount = await Bus.countDocuments({ depot: depot.name });
+            const routeCount = await Route.countDocuments({ depot: depot.name });
+            const crewCount = await Crew.countDocuments({ depot: depot.name });
+            
+            // Calculate utilization
+            const cap = depot.totalCapacity || 50;
+            const util = Math.round((busCount / cap) * 100);
+            
+            return {
+                ...depot.toObject(),
+                busCount,
+                routeCount,
+                crewCount,
+                utilization: util
+            };
+        }));
+
+        res.json(enhancedDepots);
     } catch (err) {
         res.status(500).json({ message: 'Server error', error: err.message });
     }
