@@ -41,9 +41,9 @@ const SocketClient = {
     },
 
     // 1. Driver sends live location
-    sendLocation: (busRegNo, lat, lng, driverName) => {
+    sendLocation: (busRegNo, lat, lng, driverName, routeId) => {
         if (!SocketClient.socket) return;
-        SocketClient.socket.emit('sendLocation', { busRegNo, lat, lng, driverName });
+        SocketClient.socket.emit('sendLocation', { busRegNo, lat, lng, driverName, routeId });
     },
 
     // 2. Add listener for incoming locations

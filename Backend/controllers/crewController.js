@@ -35,26 +35,46 @@ exports.createCrew = async (req, res) => {
         const isManager = role === 'Depot Manager';
         const prefix = isManager ? 'DM-' : 'CR-';
 
-        // Use provided crewId or auto-generate
+        const User = require('../models/User');
         let finalCrewId = crewId;
+
+        // ═══════════════════════════════════════════════
+        // ROBUST AUTO-ID GENERATION LOOP
+        // ═══════════════════════════════════════════════
         if (!finalCrewId) {
+            // Find the highest existing number for this prefix to start from
             const lastCrew = await Crew.findOne({ crewId: new RegExp(`^${prefix}`, 'i') }).sort({ crewId: -1 }).lean();
             let nextNum = 1;
             if (lastCrew && lastCrew.crewId) {
                 const match = lastCrew.crewId.match(new RegExp(`^${prefix}(\\d+)`, 'i'));
                 if (match) nextNum = parseInt(match[1], 10) + 1;
             }
-            finalCrewId = `${prefix}${String(nextNum).padStart(3, '0')}`;
-        }
-        req.body.crewId = finalCrewId;
 
-        // Check if User already exists with this ID
-        const User = require('../models/User');
-        const existingUser = await User.findOne({ username: finalCrewId.toLowerCase() });
-        if (existingUser) {
-            console.error(`[Crew] User already exists with ID: ${finalCrewId}`);
-            return res.status(400).json({ message: `A login account with ID ${finalCrewId} already exists. Please choose a different ID or delete the old account.` });
+            let available = false;
+            while (!available) {
+                const candidateId = `${prefix}${String(nextNum).padStart(3, '0')}`;
+                // Check BOTH collections to ensure total uniqueness
+                const [crewExists, userExists] = await Promise.all([
+                    Crew.findOne({ crewId: candidateId }),
+                    User.findOne({ username: candidateId.toLowerCase() })
+                ]);
+
+                if (!crewExists && !userExists) {
+                    finalCrewId = candidateId;
+                    available = true;
+                } else {
+                    nextNum++; // Try next number
+                }
+            }
+        } else {
+            // If ID was manually provided, still check for User existence
+            const existingUser = await User.findOne({ username: finalCrewId.toLowerCase() });
+            if (existingUser) {
+                return res.status(400).json({ message: `A login account with ID ${finalCrewId} already exists. Please choose a different ID.` });
+            }
         }
+        
+        req.body.crewId = finalCrewId;
 
         // ═══════════════════════════════════════════════
         // DEPOT LOOKUP ENHANCEMENT

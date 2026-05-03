@@ -61,7 +61,8 @@ const API = {
     deleteRes: (path, id) => API.fetch(`/${path}/${id}`, { method: 'DELETE' }),
 
     // 5. Smart Scheduling
-    generateSchedule: (data) => API.fetch('/schedule/auto-generate', { method: 'POST', body: JSON.stringify(data || {}) })
+    generateSchedule: (data) => API.fetch('/schedule/auto-generate', { method: 'POST', body: JSON.stringify(data || {}) }),
+    getMyRoute: () => API.fetch('/schedule/my-route')
 };
 
 // UI Helper within API (for simplicity)

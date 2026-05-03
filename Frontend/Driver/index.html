@@ -79,25 +79,44 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
-            const params = user.depot ? { depot: user.depot } : undefined;
-            const schedules = await API.getSchedule(params);
-            const myTrips = schedules?.filter(s => s.driver === user.fullName) || [];
             
+            // 1. Fetch Driver Profile & Assignments from dedicated endpoint
+            const res = await API.getMyRoute();
+            
+            // Update Primary Assigned Bus from profile
+            if (res && res.driver) {
+                const primaryBus = res.driver.assignedBus || 'Not Assigned';
+                document.getElementById('busLabel').innerText = `Primary Bus: ${primaryBus}`;
+                if (primaryBus !== 'Not Assigned' && primaryBus !== '—') {
+                    // Pre-fill busLabel if no trip is active
+                    if (!localStorage.getItem('dtcsl_active_trip')) {
+                        document.getElementById('busLabel').innerText = `Primary Bus: ${primaryBus}`;
+                    }
+                }
+            }
+
+            const myTrips = res?.data || [];
             const tbody = document.getElementById('myAssigns');
+            
             if (myTrips.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No assignments yet. Awaiting schedule from Depot Manager.</td></tr>';
             } else {
                 tbody.innerHTML = myTrips.map(s => {
-                    const dateLabel = s.date
-                        ? new Date(s.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                    // Format date if available
+                    const dateLabel = s.createdAt 
+                        ? new Date(s.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
                         : '';
-                    const routeDisplay = s.routeName ? `${s.route} — ${s.routeName}` : s.route;
+                    
+                    const routeId = s.route.id;
+                    const routeName = s.route.name;
+                    const busNo = s.bus.number;
+                    
                     return `
                         <tr>
                             <td>${s.time}${dateLabel ? `<br><small style="color:var(--text-muted)">${s.day}, ${dateLabel}</small>` : ''}</td>
-                            <td>${routeDisplay}</td>
-                            <td>${s.bus}</td>
-                            <td><button class="btn-sm" onclick="selectTrip('${s.route}', '${s.bus}', '${s._id}')">Select</button></td>
+                            <td>${routeId} — ${routeName}</td>
+                            <td>${busNo}</td>
+                            <td><button class="btn-sm" onclick="selectTrip('${routeId}', '${busNo}', '${s._id}')">Select</button></td>
                         </tr>
                     `;
                 }).join('');
@@ -162,7 +181,7 @@
                 trackingInterval = setInterval(() => {
                     const lat = 28.6139 + (Math.random() - 0.5) * 0.01;
                     const lng = 77.2090 + (Math.random() - 0.5) * 0.01;
-                    SocketClient.sendLocation(trip.bus, lat, lng, user.fullName);
+                    SocketClient.sendLocation(trip.bus, lat, lng, user.fullName, trip.route);
                     
                     if (!driverMarker) {
                         driverMarker = L.marker([lat, lng]).addTo(map).bindPopup('You are here');
@@ -197,7 +216,14 @@
                 }
                 
                 document.getElementById('routeLabel').innerText = 'Select Trip 🚌';
-                document.getElementById('busLabel').innerText = 'Assigned Bus: Ready';
+                
+                // Revert to primary bus if available
+                if (res && res.driver && res.driver.assignedBus) {
+                    document.getElementById('busLabel').innerText = `Primary Bus: ${res.driver.assignedBus}`;
+                } else {
+                    document.getElementById('busLabel').innerText = 'Assigned Bus: Ready';
+                }
+                
                 UI.showAlert('Trip Ended Successfully! 🏁');
             };
 

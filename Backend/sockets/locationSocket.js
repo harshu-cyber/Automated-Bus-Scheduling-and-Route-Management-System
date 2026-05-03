@@ -24,6 +24,7 @@ module.exports = (io) => {
                 lat,
                 lng,
                 driverName,
+                routeId: data.routeId,
                 timestamp: new Date()
             });
         });

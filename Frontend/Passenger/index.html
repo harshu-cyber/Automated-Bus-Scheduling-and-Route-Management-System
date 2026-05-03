@@ -96,12 +96,18 @@
                         <label>Enter Route Number or Stop</label>
                         <input type="text" id="routeSearch" placeholder="e.g. 402, 534, Kashmere Gate">
                     </div>
+                    <div class="search-group">
+                        <label>Or Select Active Bus</label>
+                        <select id="busDropdown" class="form-input" style="width:100%; padding:12px; border-radius:10px; background:var(--bg); border:1.5px solid var(--border); color:var(--text); font-family:inherit;">
+                            <option value="">-- Choose Active Bus --</option>
+                        </select>
+                    </div>
                     <button class="search-btn" id="searchBtn"><i class="fas fa-search"></i> Search Buses</button>
                     
                     <div class="table-card" style="margin-top: 30px; background: transparent; padding: 0;">
                         <h4>Nearby Arrivals</h4>
                         <table class="data-table" style="font-size: 13px;">
-                            <thead><tr><th>Route</th><th>Bus</th><th>Driver</th><th>Tracking</th><th>Share</th></tr></thead>
+                            <thead><tr><th>Route</th><th>Bus</th><th>Driver</th><th>Tracking</th><th>Action</th></tr></thead>
                             <tbody id="liveStatusBody">
                                 <tr><td colspan="5" style="text-align:center; padding: 20px; color: var(--text-muted);">Waiting for live updates...</td></tr>
                             </tbody>
@@ -158,7 +164,7 @@
     <script src="../components/socket_client.js"></script>
     <script src="../components/route-cards.js"></script>
     <script>
-        let map, markers = {};
+        let map, markers = {}, selectedBusRegNo = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
@@ -167,12 +173,27 @@
             (async () => {
                 const routes = await API.getRoutes();
                 if (routes) RouteCards.render('passengerRoutesContainer', routes, { editable: false });
+                
+                // Also fetch initial active schedules to populate the table
+                const activeSchedules = await API.getSchedule({ status: 'In-Progress' });
+                if (activeSchedules && activeSchedules.length > 0) {
+                    activeSchedules.forEach(s => {
+                        updateTable({
+                            busRegNo: s.bus,
+                            driverName: s.driver,
+                            routeId: s.route,
+                            isLive: false // We don't have location yet
+                        });
+                    });
+                }
             })();
             
             // Listen for live location updates
             SocketClient.onLocationUpdate((data) => {
+                // We always update the internal markers object
+                // but only show on map if matches selectedBusRegNo (if any)
                 updateBusLocation(data);
-                updateTable(data);
+                updateTable({ ...data, isLive: true });
             });
             
             const routeSearchInput = document.getElementById('routeSearch');
@@ -186,18 +207,32 @@
             });
 
             searchBtn.onclick = () => {
-                const query = routeSearchInput.value.trim();
-                if (!query) { UI.showAlert('Please enter a route or stop name', 'error'); return; }
-                // Filter table rows by route name
+                const query = routeSearchInput.value.trim().toLowerCase();
+                if (!query) { 
+                    document.querySelectorAll('#liveStatusBody tr').forEach(r => r.style.display = '');
+                    return; 
+                }
+                
                 const rows = document.querySelectorAll('#liveStatusBody tr');
                 let found = 0;
                 rows.forEach(row => {
                     const text = row.textContent.toLowerCase();
-                    if (text.includes(query.toLowerCase())) { row.style.display = ''; found++; }
+                    if (text.includes(query)) { row.style.display = ''; found++; }
                     else { row.style.display = 'none'; }
                 });
+                
                 if (found === 0) UI.showAlert(`No active buses found for "${query}"`, 'error');
                 else UI.showAlert(`Showing ${found} result(s) for "${query}"`);
+            };
+            const busDropdown = document.getElementById('busDropdown');
+            busDropdown.onchange = (e) => {
+                const busRegNo = e.target.value;
+                if (busRegNo) trackBus(busRegNo);
+                else {
+                    selectedBusRegNo = null;
+                    showAllMarkers();
+                    UI.showAlert('Showing all active buses');
+                }
             };
         });
 
@@ -209,6 +244,7 @@
         function updateBusLocation(data) {
             const { busRegNo, lat, lng, driverName } = data;
             
+            // Always update coordinates in our tracking object
             if (markers[busRegNo]) {
                 markers[busRegNo].setLatLng([lat, lng]);
             } else {
@@ -218,37 +254,112 @@
                     iconSize: [30, 30],
                     iconAnchor: [15, 15]
                 });
-                markers[busRegNo] = L.marker([lat, lng], { icon }).addTo(map)
-                    .bindPopup(`<b>Bus: ${busRegNo}</b><br>Driver: ${driverName}`);
+                const marker = L.marker([lat, lng], { icon })
+                    .bindPopup(`<b>Bus: ${busRegNo}</b><br>Driver: ${driverName || 'N/A'}`);
+                
+                markers[busRegNo] = marker;
+                
+                // If no specific bus is selected, show all
+                if (!selectedBusRegNo) {
+                    marker.addTo(map);
+                }
+            }
+
+            // If this is the selected bus, ensure it's on map and centered
+            if (selectedBusRegNo === busRegNo) {
+                if (!map.hasLayer(markers[busRegNo])) markers[busRegNo].addTo(map);
+                // Optionally auto-pan to selected bus
+                // map.panTo(markers[busRegNo].getLatLng());
+            } else if (selectedBusRegNo) {
+                // If another bus is selected, remove this one from map if it was there
+                if (map.hasLayer(markers[busRegNo])) map.removeLayer(markers[busRegNo]);
             }
         }
 
+        function showAllMarkers() {
+            Object.values(markers).forEach(m => {
+                if (!map.hasLayer(m)) m.addTo(map);
+            });
+        }
+
+        function hideAllMarkersExcept(busRegNo) {
+            Object.keys(markers).forEach(reg => {
+                if (reg !== busRegNo && map.hasLayer(markers[reg])) {
+                    map.removeLayer(markers[reg]);
+                }
+            });
+        }
+
+        window.trackBus = (busRegNo) => {
+            selectedBusRegNo = busRegNo;
+            hideAllMarkersExcept(busRegNo);
+            
+            const marker = markers[busRegNo];
+            if (!marker) {
+                UI.showAlert(`Waiting for Bus ${busRegNo} signal...`, 'error');
+                return;
+            }
+
+            if (!map.hasLayer(marker)) marker.addTo(map);
+            map.setView(marker.getLatLng(), 15);
+            marker.openPopup();
+            UI.showAlert(`Tracking Selected Bus: ${busRegNo} 🛰️`);
+        };
+
         function updateTable(data) {
             const tbody = document.getElementById('liveStatusBody');
+            const busDropdown = document.getElementById('busDropdown');
             const rowId = `row-${data.busRegNo}`;
             let row = document.getElementById(rowId);
             
             if (!row) {
-                // Remove placeholder if exists
                 if(tbody.innerText.includes('Waiting')) tbody.innerHTML = '';
-                
                 row = document.createElement('tr');
                 row.id = rowId;
                 tbody.appendChild(row);
+
+                // Also add to dropdown if not present
+                const exists = Array.from(busDropdown.options).some(opt => opt.value === data.busRegNo);
+                if (!exists) {
+                    const opt = document.createElement('option');
+                    opt.value = data.busRegNo;
+                    opt.textContent = `${data.busRegNo} ${data.routeId ? `(${data.routeId})` : ''}`;
+                    busDropdown.appendChild(opt);
+                }
             }
             
+            const badge = data.isLive 
+                ? '<span class="badge badge-green">LIVE</span>' 
+                : '<span class="badge badge-yellow">AWAY</span>';
+                
+            const routeDisplay = data.routeId || 'Active';
+            
             row.innerHTML = `
-                <td><strong>${data.busRegNo}</strong></td>
-                <td>Active</td>
-                <td>${data.driverName}</td>
-                <td><span class="badge badge-green">LIVE</span></td>
-                <td>
-                    <button class="share-ride-btn" onclick="openShareModal('${data.busRegNo}', '${data.driverName}')">
+                <td><strong>${routeDisplay}</strong></td>
+                <td>${data.busRegNo}</td>
+                <td>${data.driverName || '—'}</td>
+                <td>${badge}</td>
+                <td style="display:flex; gap:5px;">
+                    <button class="share-ride-btn" style="padding: 5px 8px; font-size: 11px;" onclick="trackBus('${data.busRegNo}')">
+                        <i class="fas fa-crosshairs"></i> Track
+                    </button>
+                    <button class="share-ride-btn" style="padding: 5px 8px; font-size: 11px; background: rgba(56,189,248,.1); color: #38bdf8;" onclick="openShareModal('${data.busRegNo}', '${data.driverName}')">
                         <i class="fas fa-share-alt"></i> Share
                     </button>
                 </td>
             `;
         }
+
+        window.trackBus = (busRegNo) => {
+            const marker = markers[busRegNo];
+            if (!marker) {
+                UI.showAlert(`Bus ${busRegNo} location not yet available. Waiting for signal...`, 'error');
+                return;
+            }
+            map.setView(marker.getLatLng(), 15);
+            marker.openPopup();
+            UI.showAlert(`Tracking Bus: ${busRegNo}`);
+        };
 
         // ═══════════ SHARE MY RIDE LOGIC ═══════════
         let currentShareBus = '';
