@@ -2,7 +2,7 @@
 //  DTCSL SHARED API CLIENT
 // ═══════════════════════════════════════════════════
 
-const API_SERVER = 'http://127.0.0.1:5005/api';
+const API_SERVER = `${window.location.origin}/api`;
 
 const API = {
     // 1. Fetch Helper
