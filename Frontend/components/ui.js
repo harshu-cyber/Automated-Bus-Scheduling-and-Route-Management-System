@@ -27,7 +27,6 @@ const UI = {
             ],
             driver: [
                 { name: 'My Trips', icon: 'fas fa-road', link: '../Driver/index.html', id: 'driver-trips' },
-                { name: 'Active Duty', icon: 'fas fa-bus-alt', link: '../Driver/duty.html', id: 'driver-duty' },
                 { name: 'Routes', icon: 'fas fa-route', link: '../Driver/routes.html', id: 'routes' },
                 { name: 'Apply Leave', icon: 'fas fa-calendar-minus', link: '../Driver/leave.html', id: 'driver-leave' },
                 { name: 'Profile', icon: 'fas fa-user-cog', link: '../Driver/profile.html', id: 'profile' }
