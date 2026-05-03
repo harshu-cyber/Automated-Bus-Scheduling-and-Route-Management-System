@@ -60,33 +60,48 @@
             <form class="modal-body" id="scheduleForm">
                 <div class="form-row">
                     <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" class="form-input" name="date" id="schedDate" required onchange="updateDayFromDate(this.value)">
+                    </div>
+                    <div class="form-group">
                         <label>Day</label>
                         <select class="form-input" name="day" id="schedDay">
                             <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
                             <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
                         </select>
                     </div>
+                </div>
+                <script>
+                    function updateDayFromDate(dateVal) {
+                        if (!dateVal) return;
+                        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const d = new Date(dateVal);
+                        const dayName = days[d.getDay()];
+                        document.getElementById('schedDay').value = dayName;
+                    }
+                </script>
+                <div class="form-row">
                     <div class="form-group">
                         <label>Time</label>
                         <input type="time" class="form-input" name="time" id="schedTime" required>
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
                         <label>Route ID</label>
                         <input type="text" class="form-input" name="route" id="schedRoute" required>
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label>Route Name</label>
                         <input type="text" class="form-input" name="routeName" id="schedRouteName" required>
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
                         <label>Bus Reg. No.</label>
                         <input type="text" class="form-input" name="bus" id="schedBus" required>
                     </div>
-                    <div class="form-group">
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex:1">
                         <label>Driver Name</label>
                         <input type="text" class="form-input" name="driver" id="schedDriver" required>
                     </div>
@@ -244,6 +259,7 @@
             const item = globalScheduleData.find(x => x._id === id);
             if (!item) return;
             const modal = document.getElementById('scheduleModal');
+            document.getElementById('schedDate').value = item.date || '';
             document.getElementById('schedDay').value = item.day;
             document.getElementById('schedTime').value = item.time;
             document.getElementById('schedRoute').value = item.route;
@@ -261,7 +277,9 @@
                 const formData = new FormData(e.target);
                 const data = Object.fromEntries(formData.entries());
                 const user = JSON.parse(localStorage.getItem('dtcsl_user') || '{}');
+                
                 if (user.depot) data.depot = user.depot;
+                if (user.depotId) data.depotId = user.depotId;
                 
                 const id = document.getElementById('scheduleModal').dataset.editId;
                 let res;
