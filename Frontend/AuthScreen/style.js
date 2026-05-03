@@ -14,7 +14,7 @@ loginTrigger.addEventListener('click', (e) => {
 });
 
 // ══════════════ API CONFIG ══════════════
-const API_URL = 'http://127.0.0.1:5005/api';
+const API_URL = `${window.location.origin}/api`;
 
 // ══════════════ LOGIN HANDLER ══════════════
 const loginForm = document.querySelector('.credentials-panel.signin form');

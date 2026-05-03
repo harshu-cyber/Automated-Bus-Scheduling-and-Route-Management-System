@@ -221,7 +221,7 @@
         let lastUpdateTime = null;
 
         // ═══════════ SOCKET CONNECTION ═══════════
-        const SOCKET_SERVER = 'http://localhost:5005';
+        const SOCKET_SERVER = window.location.origin;
         const socket = io(SOCKET_SERVER);
 
         socket.on('connect', () => {
